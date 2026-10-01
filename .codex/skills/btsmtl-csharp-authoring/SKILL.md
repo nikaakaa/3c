@@ -62,14 +62,18 @@ BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context
 
 recipe、源码路径和入口类型属于工具请求及服务层。服务必须确认请求类型、精确源码与当前编译脚本关联；它们不写入生成类。
 
-静态编译使用：
+静态编译先核对入口及所有修改的 partial 源码由哪个 `.csproj` 的 Compile 项实际包含。通用工具所在的项目不能代替作者入口所属程序集；新增源码导入后，经正式 IDE 项目同步生成项目文件，再检查 Compile 项，不手写生成的 `.csproj`。2026-10-01 已确认 Corin Generated 作者入口属于 `ThirdPersonCharacter.ContentDefinitions.Editor.csproj`，`ThirdPersonClient.Editor.csproj` 不包含也不引用该作者程序集。
+
+当前 Corin 作者入口的静态编译使用：
 
 ~~~text
-dotnet build ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false
+dotnet build ThirdPersonCharacter.ContentDefinitions.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false
 dotnet build-server shutdown
 ~~~
 
 编译失败时停止 generate_assets。生成只接受精确入口源码路径、已编译入口、Definition 和输出路径；入口目录内的 partial 文件随当前编译关联参与。不接受任意源码正文或旧同名入口。响应必须区分保存、创建、替换、删除和 diagnostic。
+
+生成后对照资产基线检查任务以外的节点位置和曲线值。旧作者入口可能与后续资产编辑不一致；发现重建改变这些值时，按基线修正当前作者入口并通过正式生成重新核对，不直接改资产 YAML、序列化字段或回退整个资产文件。
 
 ## EventGraph 保存与运行的核对
 

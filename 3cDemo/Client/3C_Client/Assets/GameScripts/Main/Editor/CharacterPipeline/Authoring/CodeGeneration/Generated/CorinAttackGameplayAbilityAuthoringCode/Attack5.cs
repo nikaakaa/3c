@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var node300 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph62, typeof(BtsmtlSkillTimelineDestroyFlowNode), "a1bfb095-96f8-419d-b537-4729a27224e5", "片段销毁", new Vector2(120f, 660f));
             var node297 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph62, typeof(BtsmtlSkillTimelineExitRequestFlowNode), "e50d41e966794866aabb036e577e01b1", "结束片段", new Vector2(520f, 260f));
             var node296 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph62, typeof(BtsmtlSkillSelectorFlowNode), "ec9500c9507940638d3749b191f09d33", "窗口执行或结束", new Vector2(280f, 260f));
-            var node298 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph62, typeof(BtsmtlSkillBlackboardSetFlowNode), "fe3ee5fe-a9fd-4d7e-8949-a151fca7aa22", "Set RecoveryEarly", new Vector2(320f, 0f));
+            var node298 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph62, typeof(BtsmtlSkillBlackboardSetFlowNode), "fe3ee5fe-a9fd-4d7e-8949-a151fca7aa22", "Set RecoveryEarly", new Vector2(354f, 29.333328f));
             var node301 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph63, typeof(BtsmtlSkillTimelineTimeFlowNode), "4949fb34e6e5472299ed14cd67b7c471", "Timeline时间", new Vector2(-360f, 0f));
             var node302 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph63, typeof(BtsmtlSkillNativeNodeWrapper<FloatGreaterEqualThan>), "78c18d1d68be44fc94b028aa764bbf8f", "到达结束时间", new Vector2(-100f, 0f));
             var node303 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph63, typeof(BtsmtlSkillConditionResultFlowNode), "7ba9e11e-2d47-404d-a598-e933adfe5c95", null, new Vector2(600f, 180f));

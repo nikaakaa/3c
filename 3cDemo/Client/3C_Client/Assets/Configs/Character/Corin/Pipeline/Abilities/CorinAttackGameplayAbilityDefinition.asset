@@ -2367,7 +2367,7 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: ffc20627-9e1a-4ab0-be42-8c4af9e6f1b0
-        m_StartTimeRaw: 3579139413
+        m_StartTimeRaw: 2362232013
         m_EndTimeRaw: 12025908497
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
@@ -3494,7 +3494,7 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: d88a8003-2e4d-456f-a9ba-741c5ef42426
-        m_StartTimeRaw: 3507556625
+        m_StartTimeRaw: 1789569707
         m_EndTimeRaw: 12383822370
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
@@ -7101,7 +7101,7 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 8fefb458-0d9c-4568-8bc9-51e578f50a62
-        m_StartTimeRaw: 6442450944
+        m_StartTimeRaw: 4294967296
         m_EndTimeRaw: 20186346428
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0

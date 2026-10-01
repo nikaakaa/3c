@@ -173,7 +173,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -203,7 +203,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -253,7 +253,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -283,7 +283,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -333,7 +333,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -363,7 +363,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -493,7 +493,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -523,7 +523,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -573,7 +573,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -603,7 +603,7 @@ MonoBehaviour:
     m_TargetEndpointKind: 1
     m_Rule:
       m_BlendLogic: 2
-      m_DurationSeconds: 0.16
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
@@ -804,6 +804,46 @@ MonoBehaviour:
     m_Rule:
       m_BlendLogic: 2
       m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:fafc1039-2302-5930-8a14-4039f95bc786:ea50e9bc-c50a-5078-9696-f90c067f8acf
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:fdf10e49-c270-46d9-bd2e-5e45e13c7a97:82f04395-f39f-487a-8112-e45882a37deb
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.1
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:fafc1039-2302-5930-8a14-4039f95bc786:ea50e9bc-c50a-5078-9696-f90c067f8acf
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:b871bfc9-f182-473b-8c7f-be176b620394:8e4b0f0d-829b-4818-9a8b-39d9246447ea
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.1
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:65c2a50d-80a7-57f0-b531-b2dabda051dd:aef3a0e5-5b1d-5dab-b397-8424c7213b5c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:fdf10e49-c270-46d9-bd2e-5e45e13c7a97:82f04395-f39f-487a-8112-e45882a37deb
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.1
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:65c2a50d-80a7-57f0-b531-b2dabda051dd:aef3a0e5-5b1d-5dab-b397-8424c7213b5c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:b871bfc9-f182-473b-8c7f-be176b620394:8e4b0f0d-829b-4818-9a8b-39d9246447ea
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.1
       m_BlendMode: 4
       m_CustomBlendCurve: {fileID: 0}
       m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}

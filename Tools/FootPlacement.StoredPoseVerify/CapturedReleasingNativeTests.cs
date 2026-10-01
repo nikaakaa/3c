@@ -125,7 +125,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 report["boneCount"] = rig.PoseBoneCount;
                 report["runSourceSampleIdentity"] = ((ulong)runPlan.ContentRevision.GetHashCode()).ToString();
                 report["actionSourceSampleIdentity"] = ((ulong)actionPlan.FullDependencyHash.GetHashCode()).ToString();
-                var frames = ((JArray)fixture["frames"]).Select(x => new Frame(x, (JObject)fixture["columns"], (JObject)fixture["sourceIds"], set, runPlan, actionPlan)).ToArray();
+#if SAMPLING_BOUNDARY
+                var capturedFrames=new[]{fixture["seed"]}.Concat((JArray)fixture["frames"]);
+#else
+                var capturedFrames=(JArray)fixture["frames"];
+#endif
+                var frames = capturedFrames.Select(x => new Frame(x, (JObject)fixture["columns"], (JObject)fixture["sourceIds"], set, runPlan, actionPlan)).ToArray();
                 using (var geometry = new Geometry(rig))
                 using (var runDecode = Decoder(resource, 10))
                 using (var actionDecode = Decoder(resource, 1))
@@ -159,6 +164,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             var f = frames[i];
                             var a = old[i];
                             var b = current[i];
+#if SAMPLING_BOUNDARY
+                            if(i==0)
+                            {
+                                report["nativePreRoll"]=new JObject{["frame"]=f.Number,["valid"]=b.Valid,["leftSample"]=Sample(b.Sample.Left),["rightSample"]=Sample(b.Sample.Right)};
+                                continue;
+                            }
+#endif
                             ((JArray)report["rows"]).Add(new JObject { ["frame"] = f.Number, ["dt"] = f.Delta, ["actionAlpha"] = f.ActionWeight,
                                 ["historicalWeight"] = a.SelectedWeight, ["currentWeight"] = b.SelectedWeight,
                                 ["historicalActionWeight"] = a.ActionWeight, ["currentActionWeight"] = b.ActionWeight,
@@ -205,11 +217,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 Frame f = frames[i];
                 ulong completion = baseIdentity + (ulong)i + 1;
-                var runWrite = run.Evaluate(poses[i * 2], in f.RunSample, 1f, f.RunContinuity, f.Delta, completion, i == 0 ? 0 : completion - 1);
+                var runSample=f.RunSample;
+#if SAMPLING_BOUNDARY
+                runSample=ReSample(f.RunCurves,in f.RunSample,f.RunDuration,f.RunLoop);
+#endif
+                var runWrite = run.Evaluate(poses[i * 2], in runSample, 1f, f.RunContinuity, f.Delta, completion, i == 0 ? 0 : completion - 1);
                 var actionWrite = action.Output.RequireWriteBinding(completion);
                 if (f.HasAction)
                 {
-                    actionWrite = action.Evaluate(poses[i * 2 + 1], in f.ActionSample, f.ActionWeight, f.ActionContinuity, f.Delta, completion, actionPrevious);
+                    var actionSample=f.ActionSample;
+#if SAMPLING_BOUNDARY
+                    actionSample=ReSample(f.ActionCurves,in f.ActionSample,f.ActionDuration,f.ActionLoop);
+#endif
+                    actionWrite = action.Evaluate(poses[i * 2 + 1], in actionSample, f.ActionWeight, f.ActionContinuity, f.Delta, completion, actionPrevious);
                     actionPrevious = completion;
                 }
                 var sourceRead = new CharacterPoseNativePoseReadBinding(in runWrite);
@@ -354,6 +374,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal readonly AnimationPoseSourceContribution[] Contributions = new AnimationPoseSourceContribution[2];
             internal readonly Vector3 RootPosition, RecordedAnkle;
             internal readonly Quaternion RootRotation, RecordedRotation;
+#if SAMPLING_BOUNDARY
+            internal readonly AnimationFootStepObservationCurvePair RunCurves, ActionCurves;
+            internal readonly float RunDuration, ActionDuration;
+            internal readonly bool RunLoop, ActionLoop;
+#endif
             internal Frame(JToken captured, JObject columns, JObject ids, CharacterPoseNativeDomainResourceSet set, CharacterPresentationPoseSourcePlan run, CharacterActionAnimationSourcePlan action)
             {
                 Number = (int)captured["frame"];
@@ -364,10 +389,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ActionWeight = HasAction ? 1f - r.F("weight") : 0;
                 RecordedSelectedWeight = row.F("input/foot-step-observation/source-weight");
                 RunId = ParseId((string)ids[r.S("node-id") + "|" + r.S("selection-generation") + "|0"]);
+#if SAMPLING_BOUNDARY
+                RunCurves=CopyCurves(run.FootStepObservation);RunDuration=r.F("duration-seconds");RunLoop=r.B("loop");
+                RunSample=Curves(RunCurves,set.SourcePlans.ToList().IndexOf(run),(ulong)run.ContentRevision.GetHashCode(),r);
+#else
                 RunSample = Curves(run.FootStepObservation, set.SourcePlans.ToList().IndexOf(run), (ulong)run.ContentRevision.GetHashCode(), r);
+#endif
                 if (HasAction) { var a = sources[1]; ActionTime = a.F("clip-time"); ActionContinuity = a.U("continuity");
                     ActionId = ParseId((string)ids[a.S("node-id") + "|" + a.S("selection-generation") + "|" + a.S("action-instance-id")]);
-                    ActionSample = Curves(action.FootStepObservation, set.SourcePlans.Count + set.ActionSourcePlans.ToList().IndexOf(action), (ulong)action.FullDependencyHash.GetHashCode(), a); }
+#if SAMPLING_BOUNDARY
+                    ActionCurves=CopyCurves(action.FootStepObservation);ActionDuration=a.F("duration-seconds");ActionLoop=a.B("loop");
+                    ActionSample=Curves(ActionCurves,set.SourcePlans.Count+set.ActionSourcePlans.ToList().IndexOf(action),(ulong)action.FullDependencyHash.GetHashCode(),a);
+#else
+                    ActionSample = Curves(action.FootStepObservation, set.SourcePlans.Count + set.ActionSourcePlans.ToList().IndexOf(action), (ulong)action.FullDependencyHash.GetHashCode(), a);
+#endif
+                }
                 RootPosition = row.V("physical-body/pose-root-world-position"); RootRotation = row.Q("physical-body/pose-root-world-rotation");
                 RecordedAnkle = row.V("foot/source-ankle-position"); RecordedRotation = row.Q("foot/source-ankle-rotation");
             }
@@ -377,13 +413,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             int cycle = checked((int)Math.Floor(double.Parse(clip.S("continuous-clip-time"), CultureInfo.InvariantCulture) / clip.F("duration-seconds")));
             return new AnimationFootMotionSourceSample(index, identity, clip.I("clip-binding-index"), cycle, clip.F("normalized-time"),
+#if SAMPLING_BOUNDARY
+                observation.Left.Sample(clip.F("normalized-time"),cycle,clip.F("duration-seconds"),clip.B("loop")),
+                observation.Right.Sample(clip.F("normalized-time"),cycle,clip.F("duration-seconds"),clip.B("loop")));
+#else
                 CopySample(observation.Left.Sample(clip.F("normalized-time"), cycle, clip.F("duration-seconds"), clip.B("loop"))),
                 CopySample(observation.Right.Sample(clip.F("normalized-time"), cycle, clip.F("duration-seconds"), clip.B("loop"))));
+#endif
         }
 
+#if SAMPLING_BOUNDARY
+        static AnimationFootStepObservationCurvePair CopyCurves(EditorAnimation::ThirdPersonCharacter.Pipeline.Animation.AnimationFootStepObservationCurvePair pair)=>new AnimationFootStepObservationCurvePair(CopyCurve(pair.Left),CopyCurve(pair.Right));
+        static AnimationFootStepObservationCurveSet CopyCurve(EditorAnimation::ThirdPersonCharacter.Pipeline.Animation.AnimationFootStepObservationCurveSet c)
+        {
+            var events=new AnimationFootStepLandingEvent[c.LandingEvents.Count];
+            for(int i=0;i<events.Length;i++){var e=c.LandingEvents.EventAt(i);events[i]=new AnimationFootStepLandingEvent(e.NormalizedTime,e.Ordinal,e.CycleOffset,e.Distance,e.RootLocalLanding,e.HasSwingBoundaries,e.PreSwingLeadSeconds,e.SwingLeadSeconds,e.ApproachContactLeadSeconds);}
+            return new AnimationFootStepObservationCurveSet(c.FootHeight,c.ToeHeight,c.ToeSpeed,c.PositionError,c.RotationError,c.Contact,c.LockMode,c.LockWeight,c.Support,new AnimationFootStepLandingEventTable(events));
+        }
+        static AnimationFootMotionSourceSample ReSample(AnimationFootStepObservationCurvePair c,in AnimationFootMotionSourceSample s,float duration,bool looping)=>
+            new AnimationFootMotionSourceSample(s.SourceNameIndex,s.SourceSampleIdentity,s.ClipBindingIndex,s.Cycle,s.NormalizedTime,c.Left.Sample(s.NormalizedTime,s.Cycle,duration,looping),c.Right.Sample(s.NormalizedTime,s.Cycle,duration,looping));
+#else
         static AnimationFootMotionRuntimeSample CopySample(EditorAnimation::ThirdPersonCharacter.Pipeline.Animation.AnimationFootMotionRuntimeSample sample) =>
             new AnimationFootMotionRuntimeSample(sample.FootHeight, sample.ToeHeight, sample.ToeSpeed, sample.PositionError, sample.RotationError,
                 sample.Contact, sample.LockMode, sample.LockWeight, sample.Support, in sample.Events);
+#endif
 
         static AnimationPoseSourceId ParseId(string text)
         {

@@ -31,6 +31,8 @@ if (OUT/'releasing-height-summary.json').exists():
         data[key] = json.loads((OUT/('releasing-height-'+kind+'.json')).read_text(encoding='utf-8-sig'))
 if (OUT/'releasing-source-geometry.json').exists():
     data['geometry'] = json.loads((OUT/'releasing-source-geometry.json').read_text(encoding='utf-8'))
+if (OUT/'releasing-boundary-result.json').exists():
+    data['boundary'] = json.loads((OUT/'releasing-boundary-result.json').read_text(encoding='utf-8-sig'))
 payload = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
 template = Path(__file__).with_name('releasing-native-template.html').read_text(encoding='utf-8')
 (OUT / 'releasing-action-native.html').write_text(template.replace('@@DATA@@', payload), encoding='utf-8')

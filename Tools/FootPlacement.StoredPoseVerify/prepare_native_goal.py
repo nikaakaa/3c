@@ -13,6 +13,7 @@ parser.add_argument('--variant', choices=['historical', 'current'], default='his
 parser.add_argument('--commit')
 parser.add_argument('--ik-binding', choices=['frozen','loaded','cold'], default='frozen')
 parser.add_argument('--out', type=Path)
+parser.add_argument('--editor-assemblies', type=Path)
 args = parser.parse_args()
 HELPER_COMMIT = '409b40b8a'
 RUNTIME_COMMIT = '69a36d339' if args.mode == 'releasing' else '18e1f2a4f' if args.mode == 'sources' else {'historical': '552f13083', 'current': '15894ee7b'}[args.variant]
@@ -85,7 +86,8 @@ if args.mode == 'releasing': response.append('-define:RELEASING_FIXTURE')
 if args.ik_binding == 'cold': response.append('-define:FBBIK_COLD_SOLVER_DIAGNOSTIC')
 if args.ik_binding == 'loaded': response.append('-define:FBBIK_LOADED_SOLVER_DIAGNOSTIC')
 response.extend('"' + str(path) + '"' for path in files)
-editor = json.loads(CLIENT.joinpath('Temp/FootStoredPoseFunctions/editor-assemblies.json').read_text(encoding='utf-8-sig'))
+assembly_file=args.editor_assemblies if args.editor_assemblies else CLIENT/'Temp/FootStoredPoseFunctions/editor-assemblies.json'
+editor = json.loads(assembly_file.read_text(encoding='utf-8-sig'))
 references = editor['result']['data']['result']
 needed = ['mscorlib.dll', 'System.Core.dll', 'System.dll', 'netstandard.dll', 'UnityEngine.CoreModule.dll', 'UnityEngine.PhysicsModule.dll', 'UnityEngine.AnimationModule.dll', 'UnityEditor.CoreModule.dll', 'ThirdPersonClient.Runtime.dll', 'ThirdPersonCharacter.Animation.dll', 'ThirdPersonSimulation.Core.dll', 'Unity.Collections.dll', 'Newtonsoft.Json.dll', 'nunit.framework.dll']
 if args.mode in ['rotation', 'releasing']:

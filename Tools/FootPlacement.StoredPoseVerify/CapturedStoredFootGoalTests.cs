@@ -29,8 +29,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static JObject RunStoredGoalComparison(string inputPath, string sourceResultPath, string resultPath, string footVariant)
         {
             Assert.That(EditorApplication.isPlaying || EditorApplication.isCompiling, Is.False);
-            bool releasing = footVariant == "releasing";
-            bool sourceComparison = footVariant == "sources" || releasing;
+            bool boundary = footVariant == "boundary-current";
+            bool releasing = footVariant == "releasing" || boundary;
+            bool sourceComparison = footVariant == "sources" || footVariant == "releasing";
             bool bilateral = footVariant.StartsWith("pelvis-", StringComparison.Ordinal) || releasing;
             const string scenePath = "Assets/Scenes/GameplayLab/GameplayLabFixed.unity";
             Scene previous = SceneManager.GetActiveScene();

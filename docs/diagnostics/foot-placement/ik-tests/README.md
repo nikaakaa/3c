@@ -1,5 +1,35 @@
 # 脚部局部复算工具证据
 
+## 统一离散采样边界A/B（2026-10-01，候选被拒绝）
+
+直接基线为`fbed4b1923b90d7126a50bab512b3a5e9b2a824b`已保留来源修正版，候选仅叠加`AnimationFootStepObservationCurves.cs`与`AnimationFootStepLandingEvents.cs`。原输入2023种子，Native实际预滚2023后连续2024～2056；Foot同时恢复2023真实Spring/primary/观测缓存。正式两采样文件完整编译，初始化时把发布曲线与事件数据复制到本地正式契约，暖机循环实际执行各自`Sample/Resolve`，没有借用Editor已加载的采样实现。Native Job、Workspace、Action Slot、预测、Lifecycle、骨盆与Goal均固定基线；其它工作区四个Animation修改不参与本轮源码。详见[完整结果](releasing-boundary-result.json)、[基线Native](releasing-boundary-baseline-native.json)/[Goal](releasing-boundary-baseline-goal.json)、[候选Native](releasing-boundary-candidate-native.json)/[Goal](releasing-boundary-candidate-goal.json)。
+
+| 完整33帧业务指标 | 保留基线 | 两文件候选 |
+| --- | --- | --- |
+| 右最大目标伸展比 | 117.964232% | 112.936139% |
+| 右超长帧 / 持续时间 | 8 / 0.13333334s | 8 / 0.13333334s |
+| 2031目标伸展比 | 100.6192% | 103.173792% |
+| 2032目标伸展比 | 105.127513% | 108.003044% |
+| 右最大额外修正向量单步 | 0.301888393m | 0.302270128m |
+| 右额外修正累计变化 | 1.459505558m | 1.403930138m |
+| 左超长帧 / 最大额外修正单步 | 0 / 0.072392123m | 相同 |
+| 双脚实际最终净空查询 / 最大正穿透 | 各33/33 / 0m | 相同 |
+| Native含实际采样 / Foot暖机分配 | 0B / 0B | 0B / 0B |
+
+2033的Phase为Swing时，LockMode从Sliding修为Unlocked，右脚提前一帧按正式规则进入Releasing；2030的Locked也修为Sliding。连续曲线、作者预算、实际Goal权重与Native踝位逐值一致。但2029～2032以及2041的Landing目标余量变差；2031目标距离多约1.8cm、2032多约2.0cm，已有超长进一步恶化。最大额外修正单步也超出原0.2mm比较余量，因此裁决`rejected-quality-regression`；峰值改善和阶段执行Passed不能覆盖早段回归。两版没有进入Locked的有效观测帧，Locked锚点漂移记null，不以0冒充覆盖。最大已观测脚底净空左约0.409596m、右约0.378882m，两版相同；这不是整窗口悬脚已经消除。
+
+原0.240472mm>0.2mm的FBBIK历史校准失败保留，不拿未校准膝角作为本轮收益，也未重跑IK或Replay。提前Release造成8～10cm悬脚、解除冻结产生26.435cm追赶的反证仍保留。生产候选由主窗口撤回，只恢复这两文件；本窗口不改生产或其它在途文件。
+
+封存身份：
+
+| ZIP | SHA256 |
+| --- | --- |
+| [生产两文件](releasing-boundary-production-snapshot.zip) | `1e4972b129e681c6c7128312c51c8bc0d092b7fd7f5bfb82853ec0a0d23b738d` |
+| [实际构建输入](releasing-boundary-build-inputs.zip) | `db58b3ef4135ca07d3bdf2ca53444244f26f62327620d89d2daae2fe7b1c1825` |
+| [实际执行程序集](releasing-boundary-executed-assemblies.zip) | `38294057414da2fb242ec76b83b56163dcf114d0ac1f60eac746422b6f8c7f5d` |
+
+唯一一次目标Editor检查取得本项目Edit/空闲状态后完成独立编译和真实函数A/B；两版作业均结束，未持有`DisallowAutoRefresh`，各次编译后build-server已关闭。原Temp引用清单已不存在，本轮从这一次检查取得真实已加载程序集位置，不使用备用DLL。初次Native链未包含2023预滚，已修正同一装配后按完整种子重算，最终身份绑定有预滚版本。所有候选读取来自已封存文件，撤回后报告重生成只读取封存结果，不读取工作区候选。原HTML完整33帧滑块、转换表、早段回归、每源几何与三版旧证据的DOM检查通过；浏览器视觉验收未完成。
+
 ## 实测准备前的执行交接（2026-10-01）
 
 所有本窗口Unity调用已结束；未调用或持有`AssetDatabase.DisallowAutoRefresh`，没有待释放持有，不调用未配对的`AllowAutoRefresh`。独立编译后build-server已关闭。用户要求先实测保留的改善版，因此停止新增Unity调用、Assets写入和测试运行，主窗口接手刷新；保存结果和文档不启动新实验。

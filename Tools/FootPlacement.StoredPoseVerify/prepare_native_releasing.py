@@ -14,6 +14,9 @@ parser.add_argument('--working-native', action='store_true')
 parser.add_argument('--foot-height-candidate', action='store_true')
 parser.add_argument('--out', type=Path)
 parser.add_argument('--candidate-snapshot', type=Path)
+parser.add_argument('--sampling-snapshot', type=Path)
+parser.add_argument('--sampling-variant', choices=['baseline','candidate'], default='baseline')
+parser.add_argument('--editor-assemblies', type=Path)
 ARGS = parser.parse_args()
 OUT = ARGS.out.resolve() if ARGS.out else CLIENT / 'Temp/FootReleasingNative'
 OUT.mkdir(parents=True, exist_ok=True)
@@ -23,6 +26,9 @@ PREFIX = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipe
 
 
 def source(commit, relative):
+    if ARGS.sampling_snapshot and relative in [PREFIX+'Contracts/Rig/AnimationFootStepObservationCurves.cs',PREFIX+'Contracts/Rig/AnimationFootStepLandingEvents.cs']:
+        with zipfile.ZipFile(ARGS.sampling_snapshot) as archive:
+            return archive.read(ARGS.sampling_variant+'/'+relative).decode('utf-8')
     if ARGS.foot_height_candidate and relative in [PREFIX+'BlendStack/AnimationSlotBlendJob.cs', PREFIX+'Contracts/Rig/AnimationFootStepObservationCurves.cs', PREFIX+'PoseGraph/CharacterPoseWorldContextAdapter.cs']:
         if ARGS.candidate_snapshot:
             with zipfile.ZipFile(ARGS.candidate_snapshot) as archive:
@@ -114,7 +120,14 @@ for relative, names in declarations.items():
     text = source(COMMIT, PREFIX + relative)
     imports = text[:text.index('namespace ')]
     path = OUT / Path(relative).name
-    path.write_text(imports + 'namespace ThirdPersonCharacter.Pipeline.Animation {\n' + '\n'.join(declaration(text, name) for name in names) + '\n}', encoding='utf-8')
+    if ARGS.sampling_snapshot and relative=='Contracts/Rig/AnimationFootStepObservationCurves.cs':
+        path.write_bytes(text.encode('utf-8'))
+    else: path.write_text(imports + 'namespace ThirdPersonCharacter.Pipeline.Animation {\n' + '\n'.join(declaration(text, name) for name in names) + '\n}', encoding='utf-8')
+    files.append(path)
+if ARGS.sampling_snapshot:
+    relative=PREFIX+'Contracts/Rig/AnimationFootStepLandingEvents.cs'
+    path=OUT/'AnimationFootStepLandingEvents.cs'
+    path.write_bytes(source(COMMIT,relative).encode('utf-8'))
     files.append(path)
 for relative in ['BlendStack/AnimationSlotBlendPoseWorkspace.cs', 'BlendStack/AnimationBlendSourcePoseNativeReadBinding.cs', 'PoseGraph/CharacterPoseNativeNodePoseBuffer.cs']:
     path = OUT / Path(relative).name
@@ -131,7 +144,8 @@ while depth:
 path = OUT / 'CurrentFootSelector.cs'
 path.write_text('using System;\nnamespace ThirdPersonCharacter.Pipeline.Animation { internal static class CurrentFootSelector {\n' + text[begin:end] + '\n}}', encoding='utf-8')
 files.append(path)
-references = json.loads(CLIENT.joinpath('Temp/FootStoredPoseFunctions/editor-assemblies.json').read_text(encoding='utf-8-sig'))['result']['data']['result']
+assembly_file=ARGS.editor_assemblies if ARGS.editor_assemblies else CLIENT/'Temp/FootStoredPoseFunctions/editor-assemblies.json'
+references = json.loads(assembly_file.read_text(encoding='utf-8-sig'))['result']['data']['result']
 by_name = {Path(path).name: path for path in references}
 needed = ['mscorlib.dll', 'System.Core.dll', 'System.dll', 'netstandard.dll', 'UnityEngine.CoreModule.dll',
     'UnityEngine.AnimationModule.dll', 'UnityEditor.CoreModule.dll', 'ThirdPersonClient.Runtime.dll',
@@ -142,6 +156,7 @@ assert all(name in by_name for name in needed), [name for name in needed if name
 response = ['-nostdlib+', '-langversion:latest', '-target:library', '-unsafe+', '-utf8output', '-nowarn:0436',
     '-out:"' + str(OUT / 'ThirdPersonClient.Editor.dll') + '"']
 if ARGS.foot_height_candidate: response.append('-define:FOOT_HEIGHT_CANDIDATE')
+if ARGS.sampling_snapshot: response.append('-define:SAMPLING_BOUNDARY')
 response += ['"' + str(path) + '"' for path in files]
 response += ['-r:"' + by_name[name] + '"' for name in needed]
 response += ['-r:EditorAnimation="' + by_name['ThirdPersonCharacter.Animation.dll'] + '"']
@@ -151,6 +166,10 @@ manifest = {'nativeJobCommit': COMMIT, 'baselineActionSlotCommit': BASELINE, 'ac
     'bindings': {name: hashlib.sha256(Path(by_name[name]).read_bytes()).hexdigest() for name in needed}}
 manifest['workingNative'] = ARGS.working_native
 manifest['footHeightCandidate'] = ARGS.foot_height_candidate
+if ARGS.sampling_snapshot:
+    manifest['samplingVariant']=ARGS.sampling_variant
+    manifest['samplingSnapshotSha256']=hashlib.sha256(ARGS.sampling_snapshot.read_bytes()).hexdigest()
+    manifest['samplingScope']='正式两文件完整编译；发布曲线与事件数据在初始化复制到本地正式契约，热序列实际调用本地Sample/Resolve；其它源仅取固定Git基线。'
 if ARGS.foot_height_candidate:
     manifest['candidateSourceSha256'] = {relative: hashlib.sha256(source(COMMIT, relative).encode('utf-8')).hexdigest() for relative in
         [PREFIX+'BlendStack/AnimationSlotBlendJob.cs', PREFIX+'Contracts/Rig/AnimationFootStepObservationCurves.cs', PREFIX+'PoseGraph/CharacterPoseWorldContextAdapter.cs']}

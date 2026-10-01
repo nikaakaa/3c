@@ -199,8 +199,7 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawStateMachine(FlowGraph graph, BtsmtlSkillStateMachineFlowNode node)
         {
-            BtsmtlSkillNativeStateMachine current =
-                ReadGraphReference<BtsmtlSkillNativeStateMachine>(node, "graphId");
+            BtsmtlSkillNativeStateMachine current = node.StateMachine;
             BtsmtlSkillNativeStateMachine value = (BtsmtlSkillNativeStateMachine)EditorGUILayout.ObjectField(
                 "原生状态机",
                 current,
@@ -212,8 +211,7 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawState(FlowGraph graph, BtsmtlSkillStateFlowNode node)
         {
-            BtsmtlSkillFlowGraph current =
-                ReadGraphReference<BtsmtlSkillFlowGraph>(node, "bodyGraphId");
+            BtsmtlSkillFlowGraph current = node.Body;
             BtsmtlSkillFlowGraph value = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField(
                 "状态内容",
                 current,
@@ -295,7 +293,7 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawTimeline(FlowGraph graph, BtsmtlSkillTimelineFlowNode node)
         {
-            TimelineAsset currentTimeline = ReadReference<TimelineAsset>(node, "timelineId");
+            TimelineAsset currentTimeline = node.TimelineAsset;
             TimelineAsset timeline = ObjectField("Timeline", currentTimeline, typeof(TimelineAsset));
             BtsmtlSkillTimelineOwnership currentOwnership = Read<BtsmtlSkillTimelineOwnership>(node, "timelineOwnership");
             ActionContextSlot currentContext = Read<ActionContextSlot>(node, "actionContext");
@@ -367,11 +365,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 : new BtsmtlSkillBlackboardReference(declarationId, ownerId);
         }
 
-        static T ReadGraphReference<T>(FlowNode node, string fieldId) where T : class =>
-            BtsmtlSkillGraphAuthoringMetadata.ReadGraphReferences(node)
-                .SingleOrDefault(value => value.Definition.FieldId == fieldId)
-                .Target as T;
-
         internal static void DrawValueInputs(FlowGraph graph, FlowNode node)
         {
             foreach (ValueInput input in node.GetInputValuePorts())
@@ -405,11 +398,6 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static TValue Read<TValue>(FlowNode node, string fieldId) =>
             (TValue)BtsmtlSkillGraphAuthoringMetadata.ReadField(node, fieldId);
-
-        static T ReadReference<T>(FlowNode node, string fieldId) where T : UnityEngine.Object =>
-            BtsmtlSkillGraphAuthoringMetadata.ReadReferences(node)
-                .SingleOrDefault(value => value.Definition.FieldId == fieldId)
-                .Target as T;
 
         static void Change(FlowGraph graph, string title, Action mutation, bool updateOwnedAssets = false)
         {

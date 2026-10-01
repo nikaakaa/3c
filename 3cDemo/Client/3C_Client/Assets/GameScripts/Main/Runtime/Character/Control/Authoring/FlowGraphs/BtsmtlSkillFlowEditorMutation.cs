@@ -10,12 +10,15 @@ using NodeCanvas.Framework;
 using ParadoxNotion.Design;
 using ThirdPersonCharacter.ActionSystem;
 using UnityEditor;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Control.Authoring
 {
     public static class BtsmtlSkillFlowEditorMutation
     {
+        static readonly ProfilerMarker s_Mutation = new("SkillAuthoring.Mutation");
+        static readonly ProfilerMarker s_ValidateClosure = new("SkillAuthoring.ValidateClosure");
         sealed class Depth { internal int Value; }
         static readonly ConditionalWeakTable<FlowGraph, Depth> s_Depth = new();
         static readonly ConditionalWeakTable<BtsmtlSkillNativeStateMachine, Depth> s_NativeDepth = new();
@@ -231,6 +234,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (graph is not IBtsmtlSkillFlowGraph || graph.isEditorReadOnly)
                 throw new InvalidOperationException("The skill authoring graph is not writable.");
+            using var profile = s_Mutation.Auto();
             Depth depth = s_Depth.GetValue(graph, _ => new Depth());
             if (depth.Value != 0)
                 throw new InvalidOperationException("A skill mutation must join its existing transaction instead of nesting another one.");
@@ -257,7 +261,10 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 mutation();
                 if (validateClosure)
+                {
+                    using var validationProfile = s_ValidateClosure.Auto();
                     BtsmtlSkillGraphClosure.Validate(graph, false);
+                }
                 if (validateClosure && updateOwnedAssets)
                     BtsmtlSkillOwnedAssets.ReleaseUnreferenced(graph, previousOwnedAssets);
                 graph.SelfSerialize();

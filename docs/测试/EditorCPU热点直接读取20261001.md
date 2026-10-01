@@ -67,3 +67,27 @@ LiveRead 和 LiveApply 是 LiveSync 的子项，不能与父项重复相加。�
 最终 Console 查询保留两条 `timeline_dependency_unresolved` 与一条 `actor_roster_missing` 启动错误，没有清空 Console。本轮未启动运行，不能将这些保留消息当成本轮重现，也没有扩大范围修改资源装配或角色注册。
 
 这些结果证明源码改动可编译，尚未证明实际 FPS、毫秒耗时或 RuntimeDebug 全链路 0 GC。焦点解析仍按 ViewModel Revision 扫描当前 Graph/Timeline 事件，Graph 投影和 Slate 绘制的实际成本也仍需新标记的运行帧判断。后续已有运行时直接读取对应帧，当前不追加启动和采集。
+
+## TreeClip Graph 编辑性能静态清理
+
+用户澄清卡顿发生在 TreeClip 打开的 Graph 内调整节点。正式打开链为 `TimelineEditorWindow.TreeClipOpenRequested → BtsmtlSkillTimelineTreeClipEditorEntryPoint.Open → GraphEditor.OpenWindow`，编辑内容是原有 `BtsmtlSkillFlowGraph`。本轮检查 Graph 画布、节点 Inspector、技能变更事务及图序列化；没有修改 TreeClip 播放逻辑或 Timeline 运行观察。
+
+确认并清理了以下重复工作：
+
+- 状态机、状态内容和 Timeline 节点的 Inspector 原先调用通用 ReadGraphReferences／ReadReferences，构造全部引用的投影数组，再查找一个字段。现在直接读取这些节点既有的 StateMachine、Body、TimelineAsset 属性。通用导出接口继续服务原有导出与编译消费者；Inspector 的两个私有投影包装及全部调用已删除。
+- 顺序、选择、并行步骤 Inspector 原先每次绘制把节点的 Steps 投影成 BtsmtlSkillStepAuthoringValue 数组。现在直接消费节点现有的只读 Steps，步骤修改仍在原事务中创建替换列表并交给 SetSteps；并行完成方式直接读取原有 Mode。
+- `BtsmtlSkillFlowEditorMutation.Apply → Graph.SelfSerialize → Graph.UpdateNodeIDs → AssignNodeID` 原先为每次节点或边遍历调用 parsed.Contains，线性扫描整份节点数组。现在用本次已编号节点的 ID 与 parsed 对应位置的引用判断是否已访问，复用原有数组，不增加集合或缓存。节点优先级排序、深度优先访问顺序、最终列表和 UID 规则保持原算法；这里只改变访问判断的成本。该共享方法也用于其它 NodeCanvas 图。
+
+节点编号的访问判断由每次 O(V) 降为 O(1)，此部分整体由 O(V×(V+E)) 降为 O(V+E)；原有排序仍为 O(V log V)。这是源码复杂度结论，不是实际帧耗时或拖动流畅度的 A/B 结果。变更事务仍执行原有 Undo、闭包校验、私有资源处理、序列化和脏标记，没有跳过输入检查、延后提交或新增执行路径。
+
+新增五个静态 CPU 标记：GraphEditor.Canvas 包围画布 OnGUI；GraphAuthoring.Serialize 包围实际图序列化；GraphAuthoring.UpdateNodeIDs 包围编号生成；SkillAuthoring.Mutation 包围 FlowGraph 变更事务；SkillAuthoring.ValidateClosure 包围原闭包校验。嵌套项不能与父项重复相加。Graph 的两个标记只在 UNITY_EDITOR 下编译。
+
+`ParadoxNotion.csproj` 与 `ThirdPersonClient.Runtime.csproj` 均编译通过，各为 0 警告、0 错误。日志分别为 [Graph 框架编译](../../.performance-build/reports/20261001-treeclip-graph-paradox-build.log) 和 [节点 Inspector 编译](../../.performance-build/reports/20261001-treeclip-graph-client-build.log)。两次构建使用 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后执行 build-server shutdown；五个源文件的 diff 检查通过。
+
+写入与构建前从同一目标实例确认项目路径正确、非 Play、非编译、非导入。初始 Editor Console 有范围外 BepuQueries 的 Fix64.Max 编译错误；没有修改该模块。此后 MCP 的 execute_code 与正式 CLI get_editor_state 均未返回有效状态，尚未确认本轮五个标记在 Unity 内加载。保留的 3351–3650 帧仍是旧运行记录，不能用于 TreeClip Graph 编辑结论。本轮未启动 Play、Profiler 录制或回放，未新增或修改测试代码，拖动与参数调整的实际耗时仍未验证。
+
+用户随后提供 Hold on 弹窗，显示 UnitySynchronization.ExecuteTasks 已忙 08:55。只读进程检查确认目标主 Editor 为 PID 5200，弹窗持续增长；线程 16032 为 Running，CPU 累计从 17592.125 秒增长到 17732.25 秒。Editor.log 尾部停在主段动画导入及 PhysX 初始化；这些信息说明主线程持续工作，不能单靠弹窗文字认定死锁或确定具体方法。
+
+读取同项目“手感”聊天确认，该任务向同一实例提交了 `character.foot_motion_bake` 的 replace_source，目标为 Corin_Pipeline_Attack3_Inplace.anim，随后 BuildPlanFromReadyArtifact 读取和状态请求均未得到结果。当前证据指向这轮动画替换／脚部分析请求的占用；未取得线程调用栈，具体耗时函数仍未证实，没有修改该任务的代码、取消它的操作或向其它聊天发送消息。
+
+文件核对显示 Library/ScriptAssemblies/ParadoxNotion.dll 的修改时间仍为 2026-09-29 12:43:41，用户字符串中没有 GraphAuthoring.Serialize 与 GraphEditor.Canvas；不能把 Temp/bin 的静态编译成功当成 Editor 已加载本轮修改。已停止发送新的 Unity 请求并保留现场。步骤绘制中原有的连线 LINQ 与临时 GUIContent 清理尚未写入，等待确认 Editor 非编译后继续；没有据未知状态追加源码修改或构建。

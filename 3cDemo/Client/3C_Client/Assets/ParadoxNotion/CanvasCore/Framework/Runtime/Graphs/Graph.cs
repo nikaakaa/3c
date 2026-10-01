@@ -11,6 +11,7 @@ using UndoUtility = ParadoxNotion.Design.UndoUtility;
 using System.Collections;
 #if UNITY_EDITOR
 using UnityEditor; // 3C: GenericMenu for domain-driven node creation menu
+using Unity.Profiling;
 #endif
 
 namespace NodeCanvas.Framework
@@ -54,6 +55,11 @@ namespace NodeCanvas.Framework
 
         [System.NonSerialized] private bool haltForUndo;
 
+#if UNITY_EDITOR
+        static readonly ProfilerMarker s_Serialize = new("GraphAuthoring.Serialize");
+        static readonly ProfilerMarker s_UpdateNodeIDs = new("GraphAuthoring.UpdateNodeIDs");
+#endif
+
         ///<summary>Invoked after graph serialization.</summary>
         public static event System.Action<Graph> onGraphSerialized;
         ///<summary>Invoked after graph deserialization.</summary>
@@ -86,6 +92,10 @@ namespace NodeCanvas.Framework
             if ( haltForUndo /*|| Threader.applicationIsPlaying*/ ) {
                 return false;
             }
+
+#if UNITY_EDITOR
+            using var profile = s_Serialize.Auto();
+#endif
 
             var newReferences = new List<UnityEngine.Object>();
             var newSerialization = this.Serialize(newReferences);
@@ -456,6 +466,10 @@ namespace NodeCanvas.Framework
                 return;
             }
 
+#if UNITY_EDITOR
+            using var profile = s_UpdateNodeIDs.Auto();
+#endif
+
             var lastID = -1;
             var parsed = new Node[allNodes.Count];
 
@@ -474,7 +488,7 @@ namespace NodeCanvas.Framework
 
         //Used above to assign a node's ID and list order
         int AssignNodeID(Node node, int lastID, ref Node[] parsed) {
-            if ( !parsed.Contains(node) ) {
+            if ( node.ID < 0 || node.ID > lastID || !ReferenceEquals(parsed[node.ID], node) ) {
                 lastID++;
                 node.ID = lastID;
                 parsed[lastID] = node;
@@ -520,7 +534,6 @@ namespace NodeCanvas.Framework
 
         ///<summary>Initialize the graph for target agent/blackboard with option to preload subgraphs. This is called from StartGraph as well if Initialize has not been called before.</summary>
         public void Initialize(Component newAgent, IBlackboard newParentBlackboard, bool preInitializeSubGraphs) {
-            Debug.Assert(Threader.applicationIsPlaying, "Initialize should have been called in play mode only.");
             Debug.Assert(!hasInitialized, "Graph is already initialized.");
             UpdateReferences(newAgent, newParentBlackboard, true);
             OnGraphInitialize();
@@ -543,7 +556,6 @@ namespace NodeCanvas.Framework
         public void StartGraph(Component newAgent, IBlackboard newParentBlackboard, UpdateMode newUpdateMode, System.Action<bool> callback = null) {
 
 #if UNITY_EDITOR
-            Debug.Assert(Application.isPlaying, "StartGraph should have been called in play mode only.");
             Debug.Assert(!UnityEditor.EditorUtility.IsPersistent(this), "You have tried to start a graph which is an asset, not an instance! You should Instantiate the graph first.");
 #endif
 

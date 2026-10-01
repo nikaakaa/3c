@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using Unity.Profiling;
 using UnityEngine;
 using ParadoxNotion;
 using ParadoxNotion.Design;
@@ -15,6 +16,7 @@ namespace NodeCanvas.Editor
 
     public partial class GraphEditor : EditorWindow
     {
+        static readonly ProfilerMarker s_Draw = new("GraphEditor.Canvas");
         //the root graph that was first opened in the editor
         [System.NonSerialized]
         private Graph _rootGraph;
@@ -461,6 +463,8 @@ namespace NodeCanvas.Editor
 
         //...
         void OnGUI() {
+
+            using var profile = s_Draw.Auto();
 
             //Init gui
             // GUI.skin = null;

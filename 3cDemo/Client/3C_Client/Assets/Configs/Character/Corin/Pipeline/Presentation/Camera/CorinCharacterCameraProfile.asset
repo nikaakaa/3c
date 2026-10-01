@@ -1181,9 +1181,10 @@ MonoBehaviour:
     m_LayerMask:
       serializedVersion: 2
       m_Bits: 4294967291
-    m_Radius: 0.2
-    m_NearClipPlane: 0.05
-    m_SmoothTime: 0.08
+    m_CameraRadius: 0.02
+    m_MinimumDistance: 0.1
+    m_DistanceLimit: 0
+    m_Damping: 1.5
     m_TimeDomain: 1
     m_TriggerMode: 1
   m_TargetSlots: []

@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -22,47 +21,36 @@ namespace ThirdPersonCamera
     public readonly struct CameraEnvironmentQueryRequest
     {
         public CameraEnvironmentQueryRequest(
-            Vector3 previousLocation,
             Vector3 desiredLocation,
             Vector3 pivotLocation,
-            float radius,
-            float nearClipPlane,
+            Vector3 protectionCenterOffset,
+            float protectionRadius,
+            float minimumDistance,
+            float distanceLimit,
+            float cameraRadius,
             int layerMask,
-            CameraCollisionTriggerMode triggerMode,
-            float deltaSeconds,
-            bool reset)
+            CameraCollisionTriggerMode triggerMode)
         {
-            if (!Finite(previousLocation) || !Finite(desiredLocation) || !Finite(pivotLocation) ||
-                !float.IsFinite(radius) || radius < 0f || !float.IsFinite(nearClipPlane) || nearClipPlane < 0f ||
-                !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
-                throw new ArgumentOutOfRangeException(nameof(desiredLocation));
-            if (triggerMode != CameraCollisionTriggerMode.UseGlobal &&
-                triggerMode != CameraCollisionTriggerMode.Ignore &&
-                triggerMode != CameraCollisionTriggerMode.Collide)
-                throw new ArgumentOutOfRangeException(nameof(triggerMode));
-            PreviousLocation = previousLocation;
             DesiredLocation = desiredLocation;
             PivotLocation = pivotLocation;
-            Radius = radius;
-            NearClipPlane = nearClipPlane;
+            ProtectionCenterOffset = protectionCenterOffset;
+            ProtectionRadius = protectionRadius;
+            MinimumDistance = minimumDistance;
+            DistanceLimit = distanceLimit;
+            CameraRadius = cameraRadius;
             LayerMask = layerMask;
             TriggerMode = triggerMode;
-            DeltaSeconds = deltaSeconds;
-            Reset = reset;
         }
 
-        public Vector3 PreviousLocation { get; }
         public Vector3 DesiredLocation { get; }
         public Vector3 PivotLocation { get; }
-        public float Radius { get; }
-        public float NearClipPlane { get; }
+        public Vector3 ProtectionCenterOffset { get; }
+        public float ProtectionRadius { get; }
+        public float MinimumDistance { get; }
+        public float DistanceLimit { get; }
+        public float CameraRadius { get; }
         public int LayerMask { get; }
         public CameraCollisionTriggerMode TriggerMode { get; }
-        public float DeltaSeconds { get; }
-        public bool Reset { get; }
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 
     public readonly struct CameraEnvironmentQueryResult
@@ -70,40 +58,28 @@ namespace ThirdPersonCamera
         public CameraEnvironmentQueryResult(
             CameraCollisionStatus status,
             Vector3 safeLocation,
+            float safeDistance,
             Vector3 hitNormal,
-            float hitDistance,
-            int colliderInstanceId)
+            int colliderInstanceId,
+            Vector3 occlusionPoint,
+            Vector3 occlusionNormal)
         {
-            if ((status != CameraCollisionStatus.NotEvaluated &&
-                 status != CameraCollisionStatus.Clear &&
-                 status != CameraCollisionStatus.Corrected &&
-                 status != CameraCollisionStatus.StartOverlapped &&
-                 status != CameraCollisionStatus.NoLegalSpace) ||
-                !Finite(safeLocation) || !Finite(hitNormal) || !float.IsFinite(hitDistance) || hitDistance < 0f)
-                throw new ArgumentOutOfRangeException(nameof(status));
             Status = status;
             SafeLocation = safeLocation;
+            SafeDistance = safeDistance;
             HitNormal = hitNormal;
-            HitDistance = hitDistance;
             ColliderInstanceId = colliderInstanceId;
+            OcclusionPoint = occlusionPoint;
+            OcclusionNormal = occlusionNormal;
         }
 
         public CameraCollisionStatus Status { get; }
         public Vector3 SafeLocation { get; }
+        public float SafeDistance { get; }
         public Vector3 HitNormal { get; }
-        public float HitDistance { get; }
         public int ColliderInstanceId { get; }
-
-        public static CameraEnvironmentQueryResult Clear(Vector3 desiredLocation) =>
-            new CameraEnvironmentQueryResult(
-                CameraCollisionStatus.Clear,
-                desiredLocation,
-                Vector3.zero,
-                0f,
-                0);
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+        public Vector3 OcclusionPoint { get; }
+        public Vector3 OcclusionNormal { get; }
     }
 
     public readonly struct CameraCollisionResult
@@ -116,14 +92,6 @@ namespace ThirdPersonCamera
             float correctionDistance,
             int colliderInstanceId)
         {
-            if ((status != CameraCollisionStatus.NotEvaluated &&
-                 status != CameraCollisionStatus.Clear &&
-                 status != CameraCollisionStatus.Corrected &&
-                 status != CameraCollisionStatus.StartOverlapped &&
-                 status != CameraCollisionStatus.NoLegalSpace) ||
-                !Finite(desiredLocation) || !Finite(constrainedLocation) || !Finite(hitNormal) ||
-                !float.IsFinite(correctionDistance) || correctionDistance < 0f)
-                throw new ArgumentOutOfRangeException(nameof(status));
             Status = status;
             DesiredLocation = desiredLocation;
             ConstrainedLocation = constrainedLocation;
@@ -149,9 +117,6 @@ namespace ThirdPersonCamera
                 Vector3.zero,
                 0f,
                 0);
-
-        static bool Finite(Vector3 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 
     public interface ICameraEnvironmentQuery

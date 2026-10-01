@@ -1,33 +1,34 @@
-using System;
 using UnityEngine;
 
 namespace ThirdPersonCamera
 {
     public sealed class CameraEnvironmentConstraintSolver
     {
+        const float PlaneTolerance = 0.005f;
+        const float DampingEpsilon = 0.0001f;
+        const float LogNegligibleResidual = -4.605170186f;
+
         readonly CharacterCameraProjectionPayload m_Projection;
         readonly ICameraEnvironmentQuery m_Query;
-        Vector3 m_CurrentLocation;
-        float m_CorrectionRatio;
-        float m_CorrectionVelocity;
-        bool m_HasLocation;
+        Vector3 m_PreviousOcclusionPoint;
+        Vector3 m_PreviousOcclusionNormal;
+        float m_PreviousDistance = -1f;
+        float m_CorrectionDistance;
 
         public CameraEnvironmentConstraintSolver(
             CharacterCameraProjectionPayload projection,
             ICameraEnvironmentQuery query)
         {
-            m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
+            m_Projection = projection;
             m_Query = query;
-            if (projection.Collision.Enabled && query == null)
-                throw new ArgumentNullException(nameof(query));
         }
 
         public void Reset()
         {
-            m_CurrentLocation = default;
-            m_CorrectionRatio = 0f;
-            m_CorrectionVelocity = 0f;
-            m_HasLocation = false;
+            m_PreviousOcclusionPoint = default;
+            m_PreviousOcclusionNormal = default;
+            m_PreviousDistance = -1f;
+            m_CorrectionDistance = 0f;
         }
 
         public CameraFramePlan Apply(CameraFramePlan plan, in CameraFrameInput input)
@@ -40,91 +41,105 @@ namespace ThirdPersonCamera
 
             float delta = input.Delta(settings.TimeDomain);
             Vector3 desired = plan.Location;
-            Vector3 previous = m_HasLocation ? m_CurrentLocation : desired;
+            float halfHeight = Mathf.Tan(plan.FieldOfView * 0.5f * Mathf.Deg2Rad);
+            float halfWidth = halfHeight * input.PixelWidth / input.PixelHeight;
+            float protectionRadius = plan.NearClipPlane * Mathf.Sqrt(halfWidth * halfWidth + halfHeight * halfHeight);
+            float centerDistance = plan.NearClipPlane;
+            if (plan.NearClipPlane > 0f && protectionRadius <= plan.NearClipPlane)
+            {
+                protectionRadius = (plan.NearClipPlane * plan.NearClipPlane + protectionRadius * protectionRadius) /
+                    (2f * plan.NearClipPlane);
+                centerDistance = protectionRadius;
+            }
+            Vector3 protectionCenterOffset = plan.Rotation * Vector3.forward * centerDistance;
             var request = new CameraEnvironmentQueryRequest(
-                previous,
                 desired,
                 plan.PivotLocation,
-                settings.Radius + settings.NearClipPlane,
-                settings.NearClipPlane,
+                protectionCenterOffset,
+                protectionRadius,
+                settings.MinimumDistance,
+                settings.DistanceLimit,
+                settings.CameraRadius,
                 settings.LayerMask.value,
-                settings.TriggerMode,
-                delta,
-                input.ResetHistory || !m_HasLocation);
+                settings.TriggerMode);
             CameraEnvironmentQueryResult queryResult = m_Query.Resolve(in request);
-            if (queryResult.Status == CameraCollisionStatus.NoLegalSpace)
+            Vector3 occlusionPoint = queryResult.OcclusionPoint;
+            Vector3 occlusionNormal = queryResult.OcclusionNormal;
+            float safeDistance = queryResult.SafeDistance;
+            if (queryResult.Status != CameraCollisionStatus.NoLegalSpace)
             {
-                m_HasLocation = false;
-                return plan.WithCollision(new CameraCollisionResult(
-                        CameraCollisionStatus.NoLegalSpace,
-                        desired,
-                        queryResult.SafeLocation,
-                        queryResult.HitNormal,
-                        Vector3.Distance(desired, queryResult.SafeLocation),
-                        queryResult.ColliderInstanceId))
-                    .WithValidity(false);
+                if (input.ResetHistory || m_PreviousDistance < 0f)
+                {
+                    m_CorrectionDistance = 0f;
+                }
+                else if (delta > 0f)
+                {
+                    bool hasPlane = occlusionNormal != Vector3.zero;
+                    bool hadPlane = m_PreviousOcclusionNormal != Vector3.zero;
+                    bool samePlane = hasPlane && hadPlane && IsSamePlane(occlusionPoint, occlusionNormal);
+                    if (hasPlane && !hadPlane || samePlane && safeDistance < m_PreviousDistance)
+                        m_CorrectionDistance = 0f;
+                    else if (hadPlane && !samePlane)
+                        m_CorrectionDistance = Mathf.Max(0f, safeDistance - m_PreviousDistance);
+                    m_CorrectionDistance = RemainingCorrection(m_CorrectionDistance, settings.Damping, delta);
+                }
+                float recoveryDistance = Mathf.Max(settings.MinimumDistance, safeDistance - m_CorrectionDistance);
+                if (recoveryDistance < safeDistance)
+                {
+                    Vector3 recoveryLocation = plan.PivotLocation +
+                        (queryResult.SafeLocation - plan.PivotLocation) * (recoveryDistance / safeDistance);
+                    var recoveryRequest = new CameraEnvironmentQueryRequest(
+                        recoveryLocation,
+                        plan.PivotLocation,
+                        protectionCenterOffset,
+                        protectionRadius,
+                        settings.MinimumDistance,
+                        settings.DistanceLimit,
+                        settings.CameraRadius,
+                        settings.LayerMask.value,
+                        settings.TriggerMode);
+                    queryResult = m_Query.Resolve(in recoveryRequest);
+                }
             }
 
             Vector3 constrained = queryResult.SafeLocation;
-            Vector3 pivotToCamera = desired - plan.PivotLocation;
-            float distance = pivotToCamera.magnitude;
-            CameraCollisionStatus status = queryResult.Status;
-            Vector3 normal = queryResult.HitNormal;
-            int colliderInstanceId = queryResult.ColliderInstanceId;
-            if (queryResult.Status == CameraCollisionStatus.Clear &&
-                m_HasLocation && !input.ResetHistory && m_CorrectionRatio > 0f && settings.SmoothTime > 0f)
+            var collision = new CameraCollisionResult(queryResult.Status,
+                desired, constrained, queryResult.HitNormal,
+                Vector3.Distance(desired, constrained), queryResult.ColliderInstanceId);
+            if (queryResult.Status == CameraCollisionStatus.NoLegalSpace)
             {
-                float correctionRatio = delta > 0f
-                    ? Mathf.SmoothDamp(m_CorrectionRatio, 0f, ref m_CorrectionVelocity,
-                        settings.SmoothTime, Mathf.Infinity, delta)
-                    : m_CorrectionRatio;
-                constrained = plan.PivotLocation + pivotToCamera * (1f - correctionRatio);
-                var recoveryRequest = new CameraEnvironmentQueryRequest(
-                    m_CurrentLocation,
-                    constrained,
-                    plan.PivotLocation,
-                    settings.Radius + settings.NearClipPlane,
-                    settings.NearClipPlane,
-                    settings.LayerMask.value,
-                    settings.TriggerMode,
-                    delta,
-                    false);
-                CameraEnvironmentQueryResult recoveryResult = m_Query.Resolve(in recoveryRequest);
-                if (recoveryResult.Status == CameraCollisionStatus.NoLegalSpace)
-                {
-                    m_HasLocation = false;
-                    return plan.WithCollision(new CameraCollisionResult(
-                            CameraCollisionStatus.NoLegalSpace,
-                            desired,
-                            recoveryResult.SafeLocation,
-                            recoveryResult.HitNormal,
-                            Vector3.Distance(desired, recoveryResult.SafeLocation),
-                            recoveryResult.ColliderInstanceId))
-                        .WithValidity(false);
-                }
-                constrained = recoveryResult.SafeLocation;
-                status = recoveryResult.Status;
-                normal = recoveryResult.HitNormal;
-                colliderInstanceId = recoveryResult.ColliderInstanceId;
-            }
-            else
-            {
-                m_CorrectionVelocity = 0f;
+                Reset();
+                return plan.WithCollision(collision).WithValidity(false);
             }
 
-            m_CurrentLocation = constrained;
-            m_CorrectionRatio = 1f - Vector3.Distance(plan.PivotLocation, constrained) / distance;
-            m_HasLocation = true;
+            m_PreviousDistance = queryResult.SafeDistance;
+            m_CorrectionDistance = safeDistance - m_PreviousDistance;
+            m_PreviousOcclusionPoint = occlusionPoint;
+            m_PreviousOcclusionNormal = occlusionNormal;
             CameraWorldBasicData constrainedData = plan.WorldBasicData.WithLocation(constrained);
             return plan
                 .WithWorldBasicData(constrainedData)
-                .WithCollision(new CameraCollisionResult(
-                    status,
-                    desired,
-                    constrained,
-                    normal,
-                    Vector3.Distance(desired, constrained),
-                    colliderInstanceId));
+                .WithCollision(collision);
+        }
+
+        bool IsSamePlane(Vector3 point, Vector3 normal)
+        {
+            Vector3 difference = normal - m_PreviousOcclusionNormal;
+            return Mathf.Abs(difference.x) < PlaneTolerance &&
+                Mathf.Abs(difference.y) < PlaneTolerance &&
+                Mathf.Abs(difference.z) < PlaneTolerance &&
+                Mathf.Abs(Vector3.Dot(point, normal) -
+                    Vector3.Dot(m_PreviousOcclusionPoint, m_PreviousOcclusionNormal)) < PlaneTolerance;
+        }
+
+        static float RemainingCorrection(float correction, float damping, float delta)
+        {
+            if (damping < DampingEpsilon || correction < DampingEpsilon)
+                return 0f;
+            if (delta < DampingEpsilon)
+                return correction;
+            float decay = Mathf.Exp(LogNegligibleResidual / damping * delta);
+            return correction - correction * (1f - decay);
         }
     }
 }

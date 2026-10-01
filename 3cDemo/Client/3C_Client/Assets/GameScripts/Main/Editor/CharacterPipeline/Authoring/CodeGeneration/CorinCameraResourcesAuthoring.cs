@@ -24,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             PublishShakeProcessing(profile);
             PublishInput(profile);
             PublishEffectSettings(profile);
+            PublishCollision(profile);
             var curves = new Dictionary<string, CameraCurveAsset>(StringComparer.Ordinal);
             foreach (var existing in profile.Curves) curves.Add(existing.CurveId, existing);
             var shakes = new Dictionary<string, CameraShakeAsset>(StringComparer.Ordinal);
@@ -297,6 +298,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Undo.RecordObject(profile, "从解包配置相机震动处理开关");
             profile.ConfigureShakeProcessing((bool)source["MUTE_CAMERA_SHAKE"],
                 (bool)source["MUTE_CAMERA_SHAKE_ADVANCED_PROCESS"]);
+            Save(profile);
+        }
+
+        public static void PublishCollision(CharacterCameraProfile profile)
+        {
+            JToken source = ReadAvatarConfiguration();
+            JToken collision = source["CinemachineCollisionConfig"];
+            Undo.RecordObject(profile, "从解包配置可琳相机碰撞");
+            profile.Collision.Configure(!(bool)source["MUTE_CAMERA_COLLIDER"],
+                (float)collision["COLLIDER_CAMERARADIUS"],
+                (float)collision["COLLIDER_MINDISFROMTARGET"],
+                (float)collision["COLLIDER_DISTANCELIMIT"],
+                (float)collision["m_Damping"]);
             Save(profile);
         }
 

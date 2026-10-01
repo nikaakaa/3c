@@ -1,0 +1,308 @@
+{
+  "date": "2026-10-01",
+  "unity_instance": "e852139597e42532",
+  "unity_project_path": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client",
+  "mode": "Edit 模式 PreviewScene，直接调用已编译正式生产函数；未新增测试源码，未执行实机验收",
+  "baseline_camera_commit": "f84b1a1c9",
+  "baseline": {
+    "side_wall": {
+      "box_size": [
+        0.04,
+        4,
+        0.08
+      ],
+      "box_position": [
+        0.16,
+        0,
+        3.9
+      ],
+      "desired_z": 4,
+      "status": "StartOverlapped",
+      "safe_z": 3.65277719,
+      "profile_near_clip": 0.1,
+      "collision_near_clip": 0.05,
+      "fixed_sphere_radius": 0.25
+    },
+    "release": {
+      "fps": 60,
+      "initial_z": 2.2499,
+      "first_recovery_z": 2.3656497,
+      "z_at_1_5seconds": 3.99999976
+    }
+  },
+  "near_clip": {
+    "project_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client",
+    "rows": [
+      {
+        "fieldOfView": 20,
+        "nearClip": 0.1,
+        "width": 1920,
+        "protectedRadius": 0.05646774,
+        "centerOffset": 0.05646774,
+        "safeZ": 4,
+        "status": "Clear",
+        "valid": true,
+        "externalOverlaps": 0,
+        "cornerBeyondRadius": -1.00582838e-7,
+        "rotationChange": 0
+      },
+      {
+        "fieldOfView": 40,
+        "nearClip": 0.1,
+        "width": 1920,
+        "protectedRadius": 0.07755793,
+        "centerOffset": 0.07755793,
+        "safeZ": 4,
+        "status": "Clear",
+        "valid": true,
+        "externalOverlaps": 0,
+        "cornerBeyondRadius": -5.96046448e-8,
+        "rotationChange": 0
+      },
+      {
+        "fieldOfView": 80,
+        "nearClip": 0.1,
+        "width": 1920,
+        "protectedRadius": 0.17115356,
+        "centerOffset": 0.1,
+        "safeZ": 3.86137,
+        "status": "Corrected",
+        "valid": true,
+        "externalOverlaps": 0,
+        "cornerBeyondRadius": 0,
+        "rotationChange": 0
+      },
+      {
+        "fieldOfView": 80,
+        "nearClip": 0.1,
+        "width": 3840,
+        "protectedRadius": 0.3099218,
+        "centerOffset": 0.1,
+        "safeZ": 3.68338919,
+        "status": "Corrected",
+        "valid": true,
+        "externalOverlaps": 0,
+        "cornerBeyondRadius": 0,
+        "rotationChange": 0
+      },
+      {
+        "fieldOfView": 80,
+        "nearClip": 0.2,
+        "width": 1920,
+        "protectedRadius": 0.342307121,
+        "centerOffset": 0.2,
+        "safeZ": 3.74752188,
+        "status": "Corrected",
+        "valid": true,
+        "externalOverlaps": 0,
+        "cornerBeyondRadius": 0,
+        "rotationChange": 0
+      }
+    ],
+    "profileDirty": false
+  },
+  "recovery_before_pause_mapping": {
+    "project_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client",
+    "rows": [
+      {
+        "fps": 30,
+        "initialZ": 2.4999,
+        "firstZ": 2.645822,
+        "at1_5secondsZ": 3.984999,
+        "expectedZ": 3.984999,
+        "error": 0,
+        "pausedLocationChange": 0.0150010586,
+        "valid": true
+      },
+      {
+        "fps": 60,
+        "initialZ": 2.4999,
+        "firstZ": 2.57472754,
+        "at1_5secondsZ": 3.9849987,
+        "expectedZ": 3.984999,
+        "error": -2.38418579e-7,
+        "pausedLocationChange": 0.015001297,
+        "valid": true
+      },
+      {
+        "fps": 120,
+        "initialZ": 2.4999,
+        "firstZ": 2.53779221,
+        "at1_5secondsZ": 3.98499918,
+        "expectedZ": 3.984999,
+        "error": 2.38418579e-7,
+        "pausedLocationChange": 0.01500082,
+        "valid": true
+      }
+    ]
+  },
+  "recovery": {
+    "project_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client",
+    "rows": [
+      {
+        "caseName": "release",
+        "fps": 30,
+        "initialZ": 2.4999,
+        "firstZ": 2.645822,
+        "at1_5secondsZ": 3.984999,
+        "expectedZ": 3.984999,
+        "error": 0,
+        "pausedChange": 0,
+        "at3secondsZ": 3.99985,
+        "at4secondsZ": 4,
+        "valid": true
+      },
+      {
+        "caseName": "release",
+        "fps": 60,
+        "initialZ": 2.4999,
+        "firstZ": 2.57472754,
+        "at1_5secondsZ": 3.9849987,
+        "expectedZ": 3.984999,
+        "error": -2.38418579e-7,
+        "pausedChange": 0,
+        "at3secondsZ": 3.99985027,
+        "at4secondsZ": 4,
+        "valid": true
+      },
+      {
+        "caseName": "release",
+        "fps": 120,
+        "initialZ": 2.4999,
+        "firstZ": 2.53779221,
+        "at1_5secondsZ": 3.98499918,
+        "expectedZ": 3.984999,
+        "error": 2.38418579e-7,
+        "pausedChange": 0,
+        "at3secondsZ": 3.99985027,
+        "at4secondsZ": 4,
+        "valid": true
+      },
+      {
+        "caseName": "changingPlane",
+        "initialZ": 2.4999,
+        "fartherZ": 2.54978156,
+        "closerZ": 1.9999,
+        "closerValid": true
+      },
+      {
+        "caseName": "zoomWhileRecovering",
+        "badFrames": 0,
+        "smallestRadius": 0.1
+      }
+    ],
+    "profileDirty": false
+  },
+  "safety": {
+    "project_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client",
+    "rows": [
+      {
+        "caseName": "cornerTurn",
+        "frames": 181,
+        "badFrames": 0,
+        "overlapFrames": 0,
+        "rotationChange": 0
+      },
+      {
+        "caseName": "insideWholeWall",
+        "status": "NoLegalSpace",
+        "valid": false,
+        "isSafe": false
+      },
+      {
+        "caseName": "clearAfterFailure",
+        "valid": true,
+        "z": 4,
+        "status": "Clear"
+      },
+      {
+        "caseName": "minimumDistanceInsideWall",
+        "status": "NoLegalSpace",
+        "valid": false,
+        "isSafe": false
+      },
+      {
+        "caseName": "filters",
+        "triggerIgnore": "Clear",
+        "triggerCollide": "Corrected",
+        "excludedLayer": "Clear",
+        "selfChild": "Clear"
+      },
+      {
+        "caseName": "freeOrbitFollowZoom",
+        "frames": 540,
+        "maxLocationError": 0.0000017721735
+      }
+    ],
+    "profileDirty": false
+  },
+  "directions": {
+    "project_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client",
+    "rows": [
+      {
+        "kind": "PointerDelta",
+        "rawY": 10,
+        "pitchDeltaAt30": 9.882608,
+        "yawDeltaAt30": 0,
+        "badFrames": 0,
+        "pausedLocationChange": 0,
+        "pausedRotationChange": 0
+      },
+      {
+        "kind": "PointerDelta",
+        "rawY": -10,
+        "pitchDeltaAt30": -15.4462738,
+        "yawDeltaAt30": 0,
+        "badFrames": 0,
+        "pausedLocationChange": 0,
+        "pausedRotationChange": 0
+      },
+      {
+        "kind": "Stick",
+        "rawY": 1,
+        "pitchDeltaAt30": 27.9028339,
+        "yawDeltaAt30": 0,
+        "badFrames": 0,
+        "pausedLocationChange": 0,
+        "pausedRotationChange": 0
+      },
+      {
+        "kind": "Stick",
+        "rawY": -1,
+        "pitchDeltaAt30": -33.172226,
+        "yawDeltaAt30": 0,
+        "badFrames": 0,
+        "pausedLocationChange": 0,
+        "pausedRotationChange": 0
+      }
+    ],
+    "profileDirty": false
+  },
+  "allocation": {
+    "project_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client",
+    "rows": [
+      {
+        "caseName": "allocation",
+        "blockedFrames": 10000,
+        "blockedBytes": 0,
+        "clearFrames": 10000,
+        "clearBytes": 0,
+        "recoveringPausedFrames": 10000,
+        "recoveringPausedBytes": 0
+      }
+    ],
+    "profileDirty": false
+  },
+  "final_editor": {
+    "isPlaying": false,
+    "isCompiling": false,
+    "isUpdating": false,
+    "scriptCompilationFailed": false,
+    "probeObjectsRemaining": 0,
+    "consoleErrorEntries": 0
+  },
+  "boundaries": [
+    "原作特殊标签、透明层与地面分类未完成项目身份对应",
+    "未运行实际游戏场景、Rig 画面或完整帧 GC 验收"
+  ]
+}

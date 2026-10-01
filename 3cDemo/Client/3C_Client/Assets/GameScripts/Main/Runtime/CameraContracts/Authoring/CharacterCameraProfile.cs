@@ -279,9 +279,10 @@ namespace ThirdPersonCamera
         {
             value.Append('|').Append(collision.Enabled);
             value.Append('|').Append(collision.LayerMask.value);
-            value.Append('|').Append(collision.Radius.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(collision.NearClipPlane.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(collision.SmoothTime.ToString("R", CultureInfo.InvariantCulture));
+            value.Append('|').Append(collision.CameraRadius.ToString("R", CultureInfo.InvariantCulture));
+            value.Append('|').Append(collision.MinimumDistance.ToString("R", CultureInfo.InvariantCulture));
+            value.Append('|').Append(collision.DistanceLimit.ToString("R", CultureInfo.InvariantCulture));
+            value.Append('|').Append(collision.Damping.ToString("R", CultureInfo.InvariantCulture));
             value.Append('|').Append((byte)collision.TimeDomain);
             value.Append('|').Append((byte)collision.TriggerMode);
         }

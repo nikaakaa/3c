@@ -32,70 +32,73 @@ namespace ThirdPersonCamera
         public CameraEnvironmentQueryResult Resolve(in CameraEnvironmentQueryRequest request)
         {
             QueryTriggerInteraction trigger = ToQueryTrigger(request.TriggerMode);
-            bool startOverlapped = HasOverlap(
-                request.PreviousLocation,
-                request.Radius,
-                request.LayerMask,
-                trigger);
-            bool hasDesiredSegment = TryResolveSegment(
-                request.PivotLocation,
-                request.DesiredLocation,
-                request.Radius,
-                request.NearClipPlane,
-                request.LayerMask,
-                trigger,
-                out Vector3 pivotSafe,
-                out Vector3 pivotNormal,
-                out float pivotDistance,
-                out int pivotColliderInstanceId);
-            if (!hasDesiredSegment)
+            Vector3 pivotToCamera = request.DesiredLocation - request.PivotLocation;
+            float desiredDistance = pivotToCamera.magnitude;
+            Vector3 direction = pivotToCamera / desiredDistance;
+            float distance = desiredDistance;
+            RaycastHit occlusionHit = default;
+            Vector3 hitNormal = Vector3.zero;
+            int colliderInstanceId = 0;
+            if (distance < request.MinimumDistance + ContactOffset)
             {
-                if (HasOverlap(request.DesiredLocation, request.Radius, request.LayerMask, trigger))
-                    return new CameraEnvironmentQueryResult(
-                        CameraCollisionStatus.NoLegalSpace,
-                        request.DesiredLocation,
-                        Vector3.zero,
-                        0f,
-                        0);
-                return CameraEnvironmentQueryResult.Clear(request.DesiredLocation);
+                distance = request.MinimumDistance;
+            }
+            else
+            {
+                float queryDistance = request.DistanceLimit > ContactOffset
+                    ? Mathf.Min(request.DistanceLimit, distance)
+                    : distance;
+                Vector3 origin = request.DesiredLocation - direction * queryDistance;
+                int count = m_PhysicsScene.Raycast(origin, direction, m_HitResults,
+                    queryDistance + request.CameraRadius, request.LayerMask, trigger);
+                if (TrySelectNearestHit(count, out occlusionHit))
+                {
+                    distance = Mathf.Clamp(distance - queryDistance + occlusionHit.distance - ContactOffset,
+                        request.MinimumDistance, desiredDistance);
+                    hitNormal = occlusionHit.normal;
+                    colliderInstanceId = occlusionHit.collider.GetInstanceID();
+                }
             }
 
-            Vector3 safeLocation = pivotSafe;
-            Vector3 normal = pivotNormal;
-            float distance = pivotDistance;
-            int colliderInstanceId = pivotColliderInstanceId;
-            if (!request.Reset && !startOverlapped && TryResolveSegment(
-                    request.PreviousLocation,
-                    request.DesiredLocation,
-                    request.Radius,
-                    0f,
-                    request.LayerMask,
-                    trigger,
-                    out Vector3 movementSafe,
-                    out Vector3 movementNormal,
-                    out float movementDistance,
-                    out int movementColliderInstanceId) &&
-                Vector3.SqrMagnitude(movementSafe - request.PivotLocation) <
-                Vector3.SqrMagnitude(safeLocation - request.PivotLocation))
+            Vector3 safeLocation = request.PivotLocation + direction * distance;
+            Vector3 protectionCenter = safeLocation + request.ProtectionCenterOffset;
+            bool safe = !HasOverlap(protectionCenter, request.ProtectionRadius + ContactOffset,
+                request.LayerMask, trigger);
+            if (!safe)
             {
-                safeLocation = movementSafe;
-                normal = movementNormal;
-                distance = movementDistance;
-                colliderInstanceId = movementColliderInstanceId;
+                float queryDistance = request.DistanceLimit > ContactOffset
+                    ? Mathf.Min(request.DistanceLimit, distance)
+                    : distance;
+                float sweepDistance = queryDistance - request.ProtectionRadius;
+                if (sweepDistance > 0f)
+                {
+                    Vector3 origin = protectionCenter - direction * sweepDistance;
+                    int count = m_PhysicsScene.SphereCast(origin,
+                        request.ProtectionRadius + ContactOffset, direction, m_HitResults,
+                        sweepDistance + request.CameraRadius, request.LayerMask, trigger);
+                    if (TrySelectNearestHit(count, out RaycastHit hit))
+                    {
+                        distance = Mathf.Clamp(request.ProtectionRadius + hit.distance,
+                            request.MinimumDistance, distance);
+                        safeLocation = request.PivotLocation + direction * distance;
+                        hitNormal = hit.normal;
+                        colliderInstanceId = hit.collider.GetInstanceID();
+                    }
+                }
+                safe = !HasOverlap(safeLocation + request.ProtectionCenterOffset,
+                    request.ProtectionRadius, request.LayerMask, trigger);
             }
-
-            CameraCollisionStatus status = HasOverlap(
-                safeLocation, request.Radius, request.LayerMask, trigger)
+            CameraCollisionStatus status = !safe
                 ? CameraCollisionStatus.NoLegalSpace
-                : startOverlapped
-                    ? CameraCollisionStatus.StartOverlapped
-                    : CameraCollisionStatus.Corrected;
+                : distance == desiredDistance ? CameraCollisionStatus.Clear : CameraCollisionStatus.Corrected;
             return new CameraEnvironmentQueryResult(
                 status,
                 safeLocation,
-                normal,
                 distance,
-                colliderInstanceId);
+                hitNormal,
+                colliderInstanceId,
+                occlusionHit.point,
+                occlusionHit.normal);
         }
 
         bool HasOverlap(
@@ -119,62 +122,8 @@ namespace ThirdPersonCamera
             return false;
         }
 
-        bool TryResolveSegment(
-            Vector3 origin,
-            Vector3 destination,
-            float radius,
-            float minimumDistance,
-            int layerMask,
-            QueryTriggerInteraction trigger,
-            out Vector3 safeLocation,
-            out Vector3 hitNormal,
-            out float hitDistance,
-            out int colliderInstanceId)
+        bool TrySelectNearestHit(int count, out RaycastHit nearest)
         {
-            Vector3 delta = destination - origin;
-            float length = delta.magnitude;
-            if (length <= 0.000001f)
-            {
-                safeLocation = destination;
-                hitNormal = Vector3.zero;
-                hitDistance = 0f;
-                colliderInstanceId = 0;
-                return false;
-            }
-            Vector3 direction = delta / length;
-            if (!TryGetNearestHit(origin, direction, length, radius, layerMask, trigger, out RaycastHit hit))
-            {
-                safeLocation = destination;
-                hitNormal = Vector3.zero;
-                hitDistance = 0f;
-                colliderInstanceId = 0;
-                return false;
-            }
-            float centerDistance = Mathf.Max(minimumDistance, hit.distance - ContactOffset);
-            safeLocation = origin + direction * centerDistance;
-            hitNormal = hit.normal;
-            hitDistance = hit.distance;
-            colliderInstanceId = hit.collider.GetInstanceID();
-            return true;
-        }
-
-        bool TryGetNearestHit(
-            Vector3 origin,
-            Vector3 direction,
-            float distance,
-            float radius,
-            int layerMask,
-            QueryTriggerInteraction trigger,
-            out RaycastHit nearest)
-        {
-            int count = m_PhysicsScene.SphereCast(
-                origin,
-                radius,
-                direction,
-                m_HitResults,
-                distance,
-                layerMask,
-                trigger);
             nearest = default;
             bool found = false;
             for (int i = 0; i < count; i++)

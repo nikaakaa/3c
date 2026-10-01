@@ -11,11 +11,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     public sealed class CharacterTimelineContentStore
     {
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
-        readonly Dictionary<AnimationProducerId, string> m_AnimationProducerIdentities = new();
+        readonly Dictionary<AnimationProducerId, (string Identity, AnimationChannelId Channel, string Slot)> m_AnimationProducers = new();
+        readonly HashSet<(string Timeline, string Clip)> m_MotionWarpBindings = new();
         readonly Guid m_ContentSessionIdentity = Guid.NewGuid();
         TimelineAsset[] m_AuthoringTimelineContent = Array.Empty<TimelineAsset>();
         ulong m_ContentGeneration;
         readonly CharacterTimelineDependencyResolver m_DependencyResolver;
+        CharacterPoseNativeSourceResourceCatalog m_AnimationResources;
         TimelineRuntimeNumericTarget m_NumericTarget;
         bool IsInitialized { get; set; }
 
@@ -36,6 +38,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         internal void Stop() => IsInitialized = false;
+
+        internal void BindAnimationResources(CharacterPoseNativeSourceResourceCatalog resources) =>
+            m_AnimationResources = resources;
 
         internal bool TryGetTimeline(string identity, out TimelineData timeline) =>
             m_TimelineContent.TryGetValue(identity, out timeline);
@@ -58,46 +63,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             string authoringRevision,
             string contentRevision)
         {
-            if (snapshots == null || snapshots.Count == 0)
-                throw new ArgumentException("Timeline content snapshots are required.", nameof(snapshots));
             m_TimelineContent.Clear();
-            m_AnimationProducerIdentities.Clear();
             for (int i = 0; i < snapshots.Count; i++)
             {
                 CharacterTimelineContentSnapshot snapshot = snapshots[i];
-                TimelineData timeline = snapshot?.CloneData();
-                if (timeline == null)
-                    throw new InvalidOperationException("Timeline content snapshot is invalid.");
-                if (!m_TimelineContent.TryAdd(timeline.AuthoringId, timeline))
-                    throw new InvalidOperationException($"Timeline content identity '{timeline.AuthoringId}' is duplicated.");
+                TimelineData timeline = snapshot.CloneData();
+                m_TimelineContent.Add(timeline.AuthoringId, timeline);
                 timeline.Init();
-                PrepareAnimationProducerIdentities(timeline);
             }
-            AuthoringContentRevision = authoringRevision ?? string.Empty;
+            if (m_ContentGeneration == 0)
+                foreach (TimelineData timeline in m_TimelineContent.Values)
+                    PrepareCompiledBindings(timeline);
+            AuthoringContentRevision = authoringRevision;
             m_DependencyResolver.InstallContent(m_TimelineContent.Values, m_NumericTarget);
             for (int index = 0; index < snapshots.Count; index++)
             {
                 CharacterTimelineContentSnapshot snapshot = snapshots[index];
                 TimelineInstalled(m_TimelineContent[snapshot.TimelineAuthoringId], snapshot.Content);
             }
-            ContentRevision = contentRevision ?? string.Empty;
+            ContentRevision = contentRevision;
             m_ContentGeneration = checked(m_ContentGeneration + 1);
         }
 
-        void PrepareAnimationProducerIdentities(TimelineData timeline)
+        void PrepareCompiledBindings(TimelineData timeline)
         {
             for (int i = 0; i < timeline.Tracks.Count; i++)
             {
-                if (timeline.Tracks[i] is not AnimationTrack track)
+                Track track = timeline.Tracks[i];
+                if (track is AnimationTrack animation)
+                {
+                    var producerId = new AnimationProducerId(timeline.AuthoringId, track.AuthoringId);
+                    m_AnimationProducers.Add(producerId,
+                        (producerId.ProgramProducerIdentity, animation.AnimationChannelId, animation.AnimationSlotId));
+                }
+                if (track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Logic)
                     continue;
-                var producerId = new AnimationProducerId(timeline.AuthoringId, track.AuthoringId);
-                m_AnimationProducerIdentities.Add(producerId, producerId.ProgramProducerIdentity);
+                for (int j = 0; j < track.Clips.Count; j++)
+                    if (track.Clips[j] is MotionWarpClip warp && warp.ExecutionDomain == TimelineExecutionDomain.Logic)
+                        m_MotionWarpBindings.Add((timeline.AuthoringId, warp.AuthoringId));
             }
         }
 
         internal string RequireAnimationProducerIdentity(AnimationProducerId producerId) =>
-            m_AnimationProducerIdentities.TryGetValue(producerId, out string identity)
-                ? identity : throw new InvalidOperationException($"Timeline animation producer '{producerId}' is not prepared.");
+            m_AnimationProducers.TryGetValue(producerId, out var binding)
+                ? binding.Identity : throw new InvalidOperationException($"Timeline animation producer '{producerId}' is not prepared.");
 
         public bool TryExportContent(
             out CharacterTimelineContentExport export,
@@ -136,18 +145,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 error = "Timeline content adoption requires an initialized Timeline content store.";
                 return false;
             }
-            if (!TryValidateCurrentExport(export, out error))
-                return false;
-            if (!HasCompatibleContentTopology(export.Snapshots))
+            if (export == null)
             {
-                error = "Timeline content topology or contract changed; a new Session is required.";
+                error = "请先导出 Timeline 内容。";
                 return false;
             }
+            if (!TryValidateCompiledBindings(export.Snapshots, out error))
+                return false;
             plan = new CharacterTimelineContentAdoptionPlan(
                 export,
                 m_ContentSessionIdentity,
                 m_ContentGeneration,
-                true,
                 string.Equals(ContentRevision, export.ContentRevision, StringComparison.Ordinal)
                     ? "Timeline content is already adopted."
                     : "Timeline content is prepared for adoption at the next formal playback boundary.");
@@ -158,7 +166,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             CharacterTimelineContentPublication publication,
             out CharacterTimelineContentAdoptionReport report)
         {
-            CharacterTimelineContentAdoptionPlan plan = publication?.Plan;
             if (!IsInitialized)
             {
                 report = new CharacterTimelineContentAdoptionReport(
@@ -168,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     "Timeline content adoption requires an initialized Timeline content store.");
                 return false;
             }
-            if (publication == null || !publication.IsValid)
+            if (publication == null)
             {
                 report = new CharacterTimelineContentAdoptionReport(
                     CharacterTimelineContentAdoptionState.Rejected,
@@ -177,15 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     "Timeline content publication is invalid.");
                 return false;
             }
-            if (plan == null || !plan.IsValid || !plan.IsCompatible)
-            {
-                report = new CharacterTimelineContentAdoptionReport(
-                    CharacterTimelineContentAdoptionState.Rejected,
-                    plan?.AuthoringRevision,
-                    plan?.ContentRevision,
-                    "Timeline content adoption plan is invalid or incompatible.");
-                return false;
-            }
+            CharacterTimelineContentAdoptionPlan plan = publication.Plan;
             if (!TryValidateCurrentPlan(plan, out string validationError))
             {
                 report = new CharacterTimelineContentAdoptionReport(
@@ -193,15 +192,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     plan.AuthoringRevision,
                     plan.ContentRevision,
                     validationError);
-                return false;
-            }
-            if (!HasCompatibleContentTopology(plan.Snapshots))
-            {
-                report = new CharacterTimelineContentAdoptionReport(
-                    CharacterTimelineContentAdoptionState.Rejected,
-                    plan.AuthoringRevision,
-                    plan.ContentRevision,
-                    "Timeline content topology or contract changed after preparation; a new Session is required.");
                 return false;
             }
             InstallTimelineContent(plan.Snapshots, plan.AuthoringRevision, plan.ContentRevision);
@@ -225,16 +215,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 error = "Timeline content publication requires an initialized Timeline content store.";
                 return false;
             }
-            if (plan == null || !plan.IsValid || !plan.IsCompatible)
+            if (plan == null)
             {
-                error = "Timeline content adoption plan is invalid or incompatible.";
-                return false;
-            }
-            if (!TryValidateCurrentPlan(plan, out error))
-                return false;
-            if (!HasCompatibleContentTopology(plan.Snapshots))
-            {
-                error = "Timeline content topology or contract changed; a new Session is required.";
+                error = "请先准备 Timeline 内容。";
                 return false;
             }
             publication = new CharacterTimelineContentPublication(
@@ -247,11 +230,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             CharacterTimelineContentAdoptionPlan plan,
             out string error)
         {
-            if (plan == null || !plan.IsValid || !plan.IsCompatible)
-            {
-                error = "Timeline content adoption plan is invalid or incompatible.";
-                return false;
-            }
             if (plan.SessionIdentity != m_ContentSessionIdentity)
             {
                 error = "Timeline content adoption plan belongs to another Session.";
@@ -269,11 +247,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             CharacterTimelineContentExport export,
             out string error)
         {
-            if (export == null || !export.IsValid)
-            {
-                error = "Timeline content export is invalid.";
-                return false;
-            }
             if (!TryGetCurrentContentRevisions(
                     out string authoringRevision,
                     out string contentRevision,
@@ -292,42 +265,58 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return true;
         }
 
-        bool HasCompatibleContentTopology(IReadOnlyList<CharacterTimelineContentSnapshot> snapshots)
+        bool TryValidateCompiledBindings(IReadOnlyList<CharacterTimelineContentSnapshot> snapshots, out string error)
         {
-            if (snapshots == null || snapshots.Count != m_TimelineContent.Count)
+            error = string.Empty;
+            if (snapshots.Count != m_TimelineContent.Count)
+            {
+                error = "Timeline 集合发生变化，需要重新 Build 其正式调用图。";
                 return false;
+            }
             for (int i = 0; i < snapshots.Count; i++)
             {
                 CharacterTimelineContentSnapshot snapshot = snapshots[i];
-                if (snapshot == null ||
-                    !m_TimelineContent.TryGetValue(snapshot.TimelineAuthoringId, out TimelineData installed) ||
-                    !HasSameTopology(installed, snapshot.CloneData()))
-                    return false;
-            }
-            return true;
-        }
-
-        static bool HasSameTopology(TimelineData installed, TimelineData candidate)
-        {
-            if (installed == null || candidate == null || installed.Tracks.Count != candidate.Tracks.Count)
-                return false;
-            for (int trackIndex = 0; trackIndex < installed.Tracks.Count; trackIndex++)
-            {
-                Track installedTrack = installed.Tracks[trackIndex];
-                Track candidateTrack = candidate.Tracks[trackIndex];
-                if (installedTrack == null || candidateTrack == null ||
-                    !string.Equals(installedTrack.AuthoringId, candidateTrack.AuthoringId, StringComparison.Ordinal) ||
-                    !string.Equals(installedTrack.ContractKind, candidateTrack.ContractKind, StringComparison.Ordinal) ||
-                    installedTrack.Clips.Count != candidateTrack.Clips.Count)
-                    return false;
-                for (int clipIndex = 0; clipIndex < installedTrack.Clips.Count; clipIndex++)
+                if (!m_TimelineContent.ContainsKey(snapshot.TimelineAuthoringId))
                 {
-                    Clip installedClip = installedTrack.Clips[clipIndex];
-                    Clip candidateClip = candidateTrack.Clips[clipIndex];
-                    if (installedClip == null || candidateClip == null ||
-                        !string.Equals(installedClip.AuthoringId, candidateClip.AuthoringId, StringComparison.Ordinal) ||
-                        !string.Equals(installedClip.ContractKind, candidateClip.ContractKind, StringComparison.Ordinal))
+                    error = $"Timeline '{snapshot.TimelineAuthoringId}' 缺少已编译的调用入口，需要重新 Build。";
+                    return false;
+                }
+                if (!m_DependencyResolver.TryValidateGraphBindings(snapshot.Content, out error))
+                    return false;
+                TimelineData candidate = snapshot.CloneData();
+                for (int trackIndex = 0; trackIndex < candidate.Tracks.Count; trackIndex++)
+                {
+                    Track track = candidate.Tracks[trackIndex];
+                    if (track.PersistentMuted)
+                        continue;
+                    if (track is AnimationTrack animation && track.Clips.Count != 0)
+                    {
+                        var producerId = new AnimationProducerId(candidate.AuthoringId, track.AuthoringId);
+                        if (!m_AnimationProducers.TryGetValue(producerId, out var binding) ||
+                            !binding.Channel.Equals(animation.AnimationChannelId) || binding.Slot != animation.AnimationSlotId)
+                        {
+                            error = $"动画 Track '{track.AuthoringId}' 的 producer、Channel 或 Slot 未在当前 Pose 装配中准备，需要重新 Build Pose 绑定。";
+                            return false;
+                        }
+                        for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                        {
+                            var clip = (BTSMTL.Timeline.AnimationClip)track.Clips[clipIndex];
+                            if (m_AnimationResources.HasActionPlan(clip.Clip))
+                                continue;
+                            error = $"动画资源 '{clip.Clip.name}' 未在当前 Pose 资源目录中准备，需要重新 Build 动画资源。";
+                            return false;
+                        }
+                    }
+                    if (track.ExecutionDomain != TimelineExecutionDomain.Logic)
+                        continue;
+                    for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                    {
+                        if (track.Clips[clipIndex] is not MotionWarpClip warp || warp.ExecutionDomain != TimelineExecutionDomain.Logic ||
+                            m_MotionWarpBindings.Contains((candidate.AuthoringId, warp.AuthoringId)))
+                            continue;
+                        error = $"MotionWarp '{warp.AuthoringId}' 缺少当前技能的状态绑定，需要重新 Build 技能运行数据。";
                         return false;
+                    }
                 }
             }
             return true;
@@ -394,7 +383,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 }
                 TimelineData frozen = asset.Data.Clone();
                 frozen.Init();
+#if UNITY_EDITOR
+                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(frozen, catalog);
+#else
                 TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(frozen, catalog, m_DependencyResolver);
+#endif
                 if (!discovery.IsValid)
                 {
                     for (int errorIndex = 0; errorIndex < discovery.Errors.Count; errorIndex++)

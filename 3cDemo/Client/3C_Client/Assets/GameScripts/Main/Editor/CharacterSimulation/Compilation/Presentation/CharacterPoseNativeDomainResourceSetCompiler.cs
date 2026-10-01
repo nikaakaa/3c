@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal static class CharacterPoseNativeDomainResourceSetCompiler
+    public static class CharacterPoseNativeDomainResourceSetCompiler
     {
         const string CorinProfilePath =
             "Assets/Configs/Character/Corin/Pipeline/Presentation/Profiles/CorinAnimationPresentationProfile.asset";
@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Compile(definition);
         }
 
-        internal static void Compile(CharacterPipelineDefinition definition)
+        public static void Compile(CharacterPipelineDefinition definition)
         {
             if (!definition)
                 throw new ArgumentNullException(nameof(definition));

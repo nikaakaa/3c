@@ -139,6 +139,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return plan;
         }
 
+        internal bool HasActionPlan(AnimationClip authoringClipIdentity) =>
+            m_ActionPlans.ContainsKey(authoringClipIdentity);
+
         static Dictionary<int, TValue> BuildIndex<TValue>(
             IReadOnlyList<TValue> values,
             Func<TValue, int> keySelector)

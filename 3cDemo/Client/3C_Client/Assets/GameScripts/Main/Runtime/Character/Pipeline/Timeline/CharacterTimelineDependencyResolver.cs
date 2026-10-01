@@ -110,6 +110,54 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         readonly Dictionary<(string Caller, ProgramInvocationCallerKind Kind), CompiledGraphCall> m_GraphCalls = new();
 
+        internal bool TryValidateGraphBindings(TimelineContentUnit content, out string error)
+        {
+            for (int i = 0; i < content.Dependencies.Count; i++)
+            {
+                TimelineContentDependency dependency = content.Dependencies[i];
+                if (dependency.Kind == "timeline.tree" &&
+                    (!m_GraphRevisions.TryGetValue(dependency.Identity, out string revision) || revision != dependency.ContentHash))
+                {
+                    error = $"图 '{dependency.Identity}' 的当前内容未编译，需要重建并重新预览。";
+                    return false;
+                }
+            }
+            for (int i = 0; i < content.Clips.Count; i++)
+            {
+                TimelineContentClip clip = content.Clips[i];
+                if (clip.TrackMuted || clip.ContractKind != TimelineContractKinds.TreeClip)
+                    continue;
+                ProgramInvocationCallerKind kind = clip.ExecutionPolicy.IsPresentation
+                    ? ProgramInvocationCallerKind.PresentationTreeClip : ProgramInvocationCallerKind.TimelineClip;
+                if (!TryValidateGraphCall(clip.AuthoringId, kind, clip.GraphBinding, out error))
+                    return false;
+            }
+            for (int i = 0; i < content.Markers.Count; i++)
+            {
+                TimelineContentMarker marker = content.Markers[i];
+                if (marker.TrackMuted)
+                    continue;
+                ProgramInvocationCallerKind kind = marker.ExecutionPolicy.IsPresentation
+                    ? ProgramInvocationCallerKind.PresentationMarker : ProgramInvocationCallerKind.TimelineClip;
+                if (!TryValidateGraphCall(marker.MarkerId, kind,
+                        new TimelineGraphBinding(marker.GraphId, marker.GraphRevision), out error))
+                    return false;
+            }
+            error = string.Empty;
+            return true;
+        }
+
+        bool TryValidateGraphCall(string caller, ProgramInvocationCallerKind kind, TimelineGraphBinding binding, out string error)
+        {
+            if (!m_GraphCalls.TryGetValue((caller, kind), out CompiledGraphCall call) || call.Binding.GraphId != binding.GraphId)
+            {
+                error = $"Timeline 调用 '{caller}' 的图或执行域绑定发生变化，需要重建并重新预览。";
+                return false;
+            }
+            error = string.Empty;
+            return true;
+        }
+
         void InstallGraphCalls(IReadOnlyList<ProgramSourceMapEntry> sources, bool presentationPrograms)
         {
             for (int i = 0; i < sources.Count; i++)

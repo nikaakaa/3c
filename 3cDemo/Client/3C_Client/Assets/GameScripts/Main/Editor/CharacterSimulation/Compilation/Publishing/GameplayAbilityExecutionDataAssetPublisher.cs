@@ -27,9 +27,50 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPipelineDefinition definition,
             string outputFolder)
         {
+            List<GameplayAbilityDefinition> abilities = CollectDefinitionAbilities(definition);
+            string folder = RequireAssetFolder(outputFolder);
+            var compiled = new List<CompiledAbility>(abilities.Count);
+            for (int i = 0; i < abilities.Count; i++)
+            {
+                GameplayAbilityDefinition ability = abilities[i];
+                compiled.Add(CompileAbility(definition, ability,
+                    $"{folder}/{ability.AbilityId}.Float32Data.asset",
+                    $"{folder}/{ability.AbilityId}.FixedData.asset"));
+            }
+            PublishCompiledDefinition(definition, compiled);
+        }
+
+        public static void RepublishDefinition(CharacterPipelineDefinition definition)
+        {
+            List<GameplayAbilityDefinition> abilities = CollectDefinitionAbilities(definition);
+            var float32Paths = new Dictionary<string, string>(StringComparer.Ordinal);
+            var fixedPaths = new Dictionary<string, string>(StringComparer.Ordinal);
+            for (int i = 0; i < definition.Float32AbilityData.Count; i++)
+            {
+                GameplayAbilityDataAsset asset = definition.Float32AbilityData[i];
+                float32Paths.Add(asset.AbilityId, AssetDatabase.GetAssetPath(asset));
+            }
+            for (int i = 0; i < definition.FixedAbilityData.Count; i++)
+            {
+                var asset = (FixedGameplayAbilityDataAsset)definition.FixedAbilityData[i];
+                fixedPaths.Add(asset.AbilityId, AssetDatabase.GetAssetPath(asset));
+            }
+            var compiled = new List<CompiledAbility>(abilities.Count);
+            for (int i = 0; i < abilities.Count; i++)
+            {
+                GameplayAbilityDefinition ability = abilities[i];
+                if (!float32Paths.TryGetValue(ability.AbilityId, out string float32Path) ||
+                    !fixedPaths.TryGetValue(ability.AbilityId, out string fixedPath))
+                    throw new InvalidOperationException($"技能 '{ability.AbilityId}' 缺少 Definition 已发布的 Fixed / Float32 产物；请先正式发布该技能。");
+                compiled.Add(CompileAbility(definition, ability, float32Path, fixedPath));
+            }
+            PublishCompiledDefinition(definition, compiled);
+        }
+
+        static List<GameplayAbilityDefinition> CollectDefinitionAbilities(CharacterPipelineDefinition definition)
+        {
             if (!definition)
                 throw new ArgumentNullException(nameof(definition));
-            string folder = RequireAssetFolder(outputFolder);
             var abilities = new List<GameplayAbilityDefinition>();
             var identities = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < definition.AbilityGrants.Count; i++)
@@ -41,20 +82,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 abilities.Add(ability);
             }
             abilities.Sort((left, right) => string.CompareOrdinal(left.AbilityId, right.AbilityId));
+            return abilities;
+        }
 
-            var compiled = new List<CompiledAbility>(abilities.Count);
+        static void PublishCompiledDefinition(CharacterPipelineDefinition definition, List<CompiledAbility> compiled)
+        {
             var abilityTimelineIdentities = new HashSet<string>(StringComparer.Ordinal);
             var abilityTimelines = new List<TimelineAsset>();
-            for (int i = 0; i < abilities.Count; i++)
+            for (int i = 0; i < compiled.Count; i++)
             {
-                CompiledAbility result = CompileAbility(definition, abilities[i], folder);
+                CompiledAbility result = compiled[i];
                 for (int timelineIndex = 0; timelineIndex < result.Timelines.Count; timelineIndex++)
                 {
                     TimelineAsset timeline = result.Timelines[timelineIndex];
                     if (abilityTimelineIdentities.Add(timeline.Data.AuthoringId))
                         abilityTimelines.Add(timeline);
                 }
-                compiled.Add(result);
             }
             for (int i = 0; i < compiled.Count; i++)
             {
@@ -78,9 +121,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             definition.SetFixedAbilityData(fixedAssets);
             MergeTimelines(definition, abilityTimelines);
             EditorUtility.SetDirty(definition);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(definition);
             for (int i = 0; i < compiled.Count; i++)
             {
+                AssetDatabase.SaveAssetIfDirty(float32Assets[i]);
+                AssetDatabase.SaveAssetIfDirty(fixedAssets[i]);
                 AssetDatabase.ImportAsset(compiled[i].Float32Path, ImportAssetOptions.ForceUpdate);
                 AssetDatabase.ImportAsset(compiled[i].FixedPath, ImportAssetOptions.ForceUpdate);
             }
@@ -104,7 +149,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 GameplayAbilityDefinition ability = definition.AbilityGrants[i]?.Ability;
                 if (ability && remaining.Remove(ability.AbilityId))
-                    compiled.Add(CompileAbility(definition, ability, folder));
+                    compiled.Add(CompileAbility(definition, ability,
+                        $"{folder}/{ability.AbilityId}.Float32Data.asset",
+                        $"{folder}/{ability.AbilityId}.FixedData.asset"));
             }
             if (remaining.Count != 0)
                 throw new InvalidOperationException($"Definition '{definition.name}' does not grant every selected Ability.");
@@ -162,7 +209,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CompiledAbility CompileAbility(
             CharacterPipelineDefinition definition,
             GameplayAbilityDefinition ability,
-            string folder)
+            string float32Path,
+            string fixedPath)
         {
             GameplayAbilitySemanticFrontendResult semantic =
                 GameplayAbilitySemanticFrontendCompiler.Compile(
@@ -190,8 +238,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 Float32 = GameplayAbilityTargetCompiler.CompileFloat32(semantic.Artifact),
                 Fixed = GameplayAbilityTargetCompiler.CompileFixed(semantic.Artifact),
-                Float32Path = RequireAssetPath($"{folder}/{ability.AbilityId}.Float32Data.asset", "float32AssetPath"),
-                FixedPath = RequireAssetPath($"{folder}/{ability.AbilityId}.FixedData.asset", "fixedAssetPath"),
+                Float32Path = RequireAssetPath(float32Path, nameof(float32Path)),
+                FixedPath = RequireAssetPath(fixedPath, nameof(fixedPath)),
                 Timelines = timelines
             };
         }
@@ -208,7 +256,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static TAsset PrepareAsset<TAsset>(string path)
             where TAsset : ScriptableObject
         {
-            ValidateAssetSlot<TAsset>(path);
             UnityEngine.Object existing = AssetDatabase.LoadMainAssetAtPath(path);
             TAsset asset = existing as TAsset;
             if (asset)

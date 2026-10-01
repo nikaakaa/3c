@@ -150,7 +150,7 @@ namespace BTSMTL.Timeline.Editor
             m_LastState = m_Session.AttachmentState;
             m_Status.text = timeline.EvictedEvents != 0 ? "较早记录已淘汰" :
                 timeline.UnmappedEventCount != 0 ? "部分来源映射缺失" :
-                m_Session.AttachmentState == RuntimeDebugAttachmentState.Live ? "实时执行记录" : "历史节点与变量；角色画面尚未恢复";
+                m_Session.AttachmentState == RuntimeDebugAttachmentState.Live ? "实时执行记录" : "历史执行记录";
             m_Surface.MarkDirtyRepaint();
         }
 

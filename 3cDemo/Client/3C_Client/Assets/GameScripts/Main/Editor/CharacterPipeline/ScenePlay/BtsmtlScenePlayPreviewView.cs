@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using BTSMTL.Diagnostics.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Tick;
 using UnityEditor;
@@ -12,8 +13,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
     sealed class BtsmtlScenePlayPreviewView : VisualElement
     {
         readonly BtsmtlScenePlayPreviewHost m_Host = BtsmtlScenePlayPreviewHost.Shared;
+        readonly RuntimeDebugSession m_Debug = RuntimeDebugSession.Shared;
         readonly Image m_Image = new Image { scaleMode = ScaleMode.ScaleToFit };
         readonly Label m_Status = new Label();
+        readonly Label m_HistoryStatus = new Label { style = { whiteSpace = WhiteSpace.Normal } };
         readonly ToolbarButton m_Play;
         readonly ToolbarButton m_Pause;
         readonly ToolbarButton m_Step;
@@ -25,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         readonly ToolbarMenu m_Abilities = new ToolbarMenu { text = "技能图" };
         readonly PopupField<string> m_InputRequest = new PopupField<string>();
         readonly ToolbarButton m_SubmitInput;
+        ulong m_DisplayedHistorySequence = ulong.MaxValue;
 
         internal BtsmtlScenePlayPreviewView()
         {
@@ -62,6 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             inputToolbar.Add(m_InputRequest);
             inputToolbar.Add(m_SubmitInput);
             Add(inputToolbar);
+            Add(m_HistoryStatus);
             m_Image.style.flexGrow = 1;
             m_Image.style.backgroundColor = new Color(0.08f, 0.08f, 0.08f);
             Add(m_Image);
@@ -70,12 +75,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 m_Host.Changed += OnHostChanged;
                 m_Host.Renderer.Changed += OnImageChanged;
+                m_Debug.Changed += OnDiagnosticsChanged;
                 OnHostChanged();
             });
             RegisterCallback<DetachFromPanelEvent>(_ =>
             {
                 m_Host.Changed -= OnHostChanged;
                 m_Host.Renderer.Changed -= OnImageChanged;
+                m_Debug.Changed -= OnDiagnosticsChanged;
                 ReleaseViewport();
             });
         }
@@ -95,11 +102,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         void OnHostChanged()
         {
             bool ready = m_Host.IsReady;
-            m_Play.SetEnabled(ready);
-            m_Pause.SetEnabled(ready);
-            m_Step.SetEnabled(ready);
-            m_Rate.SetEnabled(ready);
-            m_Clock.SetEnabled(ready);
             m_Abilities.SetEnabled(ready);
             m_Abilities.menu.MenuItems().Clear();
             m_InputRequest.choices.Clear();
@@ -119,8 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             }
             bool hasRequests = m_InputRequest.choices.Count != 0;
             m_InputRequest.SetValueWithoutNotify(hasRequests ? m_InputRequest.choices[0] : string.Empty);
-            m_InputRequest.SetEnabled(hasRequests);
-            m_SubmitInput.SetEnabled(hasRequests);
+            RefreshPlaybackControls();
             m_Status.text = m_Host.Error.Length != 0 ? m_Host.Error : ready ? "" : "预览未运行";
             if (ready)
                 UpdateViewport();
@@ -130,6 +131,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
         static string ClockLabel(GameplayPresentationDebugClockMode mode) =>
             mode == GameplayPresentationDebugClockMode.LogicLockedPresentation ? "表现随逻辑步进" : "表现随播放帧";
+
+        void RefreshPlaybackControls()
+        {
+            bool ready = m_Host.IsReady;
+            bool history = m_Debug.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended;
+            bool canDrive = ready && !history;
+            m_Play.SetEnabled(canDrive);
+            m_Pause.SetEnabled(ready);
+            m_Step.SetEnabled(canDrive);
+            m_Rate.SetEnabled(canDrive);
+            m_Clock.SetEnabled(canDrive);
+            bool hasRequests = canDrive && m_InputRequest.choices.Count != 0;
+            m_InputRequest.SetEnabled(hasRequests);
+            m_SubmitInput.SetEnabled(hasRequests);
+        }
+
+        void OnDiagnosticsChanged()
+        {
+            RefreshPlaybackControls();
+            if (m_Host.IsReady && m_Debug.AttachmentState == RuntimeDebugAttachmentState.Live && m_Debug.IsCaptureRecording)
+                m_Host.RefreshPreviewImage();
+            OnImageChanged();
+        }
 
         void UpdateViewport()
         {
@@ -141,14 +165,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 return;
             m_Host.Renderer.SetViewport(this, new Vector2Int(width, height));
             m_Host.RefreshPreviewImage();
-            m_Image.image = m_Host.Renderer.Texture;
+            OnImageChanged();
         }
 
         void OnImageChanged()
         {
             if (panel == null || resolvedStyle.display == DisplayStyle.None)
                 return;
-            m_Image.image = m_Host.Renderer.Texture;
+            if (m_Debug.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
+            {
+                if (m_Debug.TryGetHistoryEvent(out RuntimeTraceEvent trace) &&
+                    m_Host.Renderer.TryGetHistoryFrame(m_Debug.CaptureId, in trace, out var recorded))
+                {
+                    if (m_Image.image != recorded.Texture || m_DisplayedHistorySequence != m_Debug.HistorySequence)
+                        m_HistoryStatus.text = $"历史画面 · Tick {recorded.LogicTick} · 表现帧 {recorded.PresentationFrame}";
+                    m_Image.image = recorded.Texture;
+                }
+                else
+                {
+                    m_Image.image = null;
+                    m_HistoryStatus.text = "该位置的角色画面未记录或已淘汰";
+                }
+                m_DisplayedHistorySequence = m_Debug.HistorySequence;
+            }
+            else
+            {
+                m_Image.image = m_Host.Renderer.Texture;
+                m_HistoryStatus.text = string.Empty;
+                m_DisplayedHistorySequence = ulong.MaxValue;
+            }
             m_Image.MarkDirtyRepaint();
         }
 
@@ -156,6 +201,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         {
             m_Host.Renderer.RemoveViewport(this);
             m_Image.image = null;
+            m_HistoryStatus.text = string.Empty;
+            m_DisplayedHistorySequence = ulong.MaxValue;
         }
     }
 }

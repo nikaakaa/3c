@@ -5,6 +5,7 @@ using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
 using ThirdPersonGameplay.Tick;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -52,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             internal ObjectField Profile;
             internal ToolbarToggle RuntimeDebug;
             internal ToolbarMenu Session;
+            internal ToolbarButton RebuildContent;
         }
 
         sealed class Controller : ITimelineWorkspaceModeController
@@ -83,6 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             bool m_RuntimeInterest;
             bool m_ConnectionRefreshQueued;
             bool m_ContentRefreshQueued;
+            bool m_RebuildingContent;
             SimulationSessionHost m_ObservedSession;
             SimulationSessionLifecycleState m_ObservedLifecycle;
             ulong m_ObservedGeneration;
@@ -116,7 +119,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         value = m_Profile
                     },
                     RuntimeDebug = new ToolbarToggle { text = "RuntimeDebug" },
-                    Session = new ToolbarMenu { text = "Session" }
+                    Session = new ToolbarMenu { text = "Session" },
+                    RebuildContent = new ToolbarButton(RebuildPreviewContent)
+                    {
+                        text = "重建并重新预览",
+                        tooltip = "采用新增资源和图绑定，重新开始预览；当前播放与画面历史将清空。"
+                    }
                 };
                 controls.Profile.style.width = 170f;
                 controls.Session.RegisterCallback<PointerDownEvent>(
@@ -155,6 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (window is TimelineEditorWindow)
                     container.Add(new ToolbarButton(BtsmtlScenePlayPreviewWindow.Open) { text = "打开 Preview" });
                 container.Add(controls.Session);
+                container.Add(controls.RebuildContent);
                 m_Controls.Add(controls);
                 RefreshControls();
                 ApplyToWindow(window);
@@ -235,7 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void UpdateSessionState()
             {
-                if (m_ContentRefreshQueued && BtsmtlScenePlayPreviewHost.Shared.IsReady &&
+                if (m_ContentRefreshQueued && !m_RebuildingContent && BtsmtlScenePlayPreviewHost.Shared.IsReady &&
                     !EditorApplication.isCompiling && !EditorApplication.isUpdating)
                     ApplyChangedTimelineContent();
                 if (m_ConnectionRefreshQueued)
@@ -646,10 +655,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 OnPreviewHostChanged();
             }
 
+            bool CanRebuildPreviewContent() =>
+                Mode == TimelineWorkspaceMode.Preview && m_Profile != null && m_Profile.IsValid &&
+                !m_RebuildingContent && !EditorApplication.isPlayingOrWillChangePlaymode &&
+                !EditorApplication.isCompiling && !EditorApplication.isUpdating && !EditorUtility.scriptCompilationFailed;
+
+            async void RebuildPreviewContent()
+            {
+                var definitions = new HashSet<CharacterPipelineDefinition>();
+                FixedCharacterHost[] actors = m_Profile.AssemblyPrefab.GetComponentsInChildren<FixedCharacterHost>(true);
+                for (int i = 0; i < actors.Length; i++)
+                    if (actors[i].SessionHost.Composition.SessionId == m_Profile.ContextId)
+                        definitions.Add(actors[i].CharacterDefinition);
+                if (definitions.Count == 0)
+                {
+                    SetContentStatus(CharacterTimelineContentAdoptionState.Failed, "装配 Prefab 中没有当前 Context 的正式角色 Definition。");
+                    return;
+                }
+                m_RebuildingContent = true;
+                TimelineWorkspaceModeBridge.SetRuntimeDebugEnabled(false);
+                ReleaseRuntimeInterest();
+                BtsmtlScenePlayPreviewHost.Shared.Close();
+                ClearContentWorkflow();
+                m_ContentRefreshQueued = false;
+                SetStatus("正在重建预览内容。");
+                try
+                {
+                    foreach (CharacterPipelineDefinition definition in definitions)
+                    {
+                        GameplayAbilityExecutionDataAssetPublisher.RepublishDefinition(definition);
+                        CharacterPoseNativeDomainResourceSetCompiler.Compile(definition);
+                    }
+                    await BtsmtlScenePlayPreviewHost.Shared.OpenAsync(m_Profile);
+                }
+                finally
+                {
+                    m_RebuildingContent = false;
+                    m_ContentRefreshQueued = false;
+                    OnPreviewHostChanged();
+                    if (!BtsmtlScenePlayPreviewHost.Shared.IsOpen && BtsmtlScenePlayPreviewHost.Shared.Error.Length == 0)
+                        SetContentStatus(CharacterTimelineContentAdoptionState.Failed, "内容重建未完成；编译器的具体错误见 Console。");
+                }
+            }
+
             internal void OnPreviewHostChanged()
             {
                 m_ObservedSession = BtsmtlScenePlayPreviewHost.Shared.Session;
-                SetStatus(FormatPreviewContentStatus(BtsmtlScenePlayPreviewHost.Shared.Error));
+                if (!m_RebuildingContent)
+                    SetStatus(FormatPreviewContentStatus(BtsmtlScenePlayPreviewHost.Shared.Error));
                 QueueConnectionRefresh();
             }
 
@@ -1038,6 +1091,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     controls.RuntimeDebug.SetValueWithoutNotify(TimelineWorkspaceModeBridge.RuntimeDebugEnabled);
                     controls.RuntimeDebug.SetEnabled(HasRuntime && m_Profile != null && m_Profile.IsValid);
                     controls.Profile.SetValueWithoutNotify(m_Profile);
+                    controls.Profile.SetEnabled(!m_RebuildingContent);
+                    controls.RebuildContent.SetEnabled(CanRebuildPreviewContent());
                 }
                 if (Mode == TimelineWorkspaceMode.Authoring &&
                     m_Profile != null &&

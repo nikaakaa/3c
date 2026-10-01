@@ -203,6 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativeRoleSession RoleSession => m_Session;
+        internal CharacterPoseNativeSourceResourceCatalog AnimationResources => m_Services.AnimationResources;
         internal PoseGraphId GraphId => m_Session.GraphId;
         internal string GraphRevision => m_Session.GraphRevision;
         internal string ResourceRevision => m_Session.ResourceRevision;

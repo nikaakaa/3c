@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BTSMTL.Diagnostics;
 using ThirdPerson.ProductStartup;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -126,7 +127,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         internal void RefreshPreviewImage()
         {
             if (IsReady)
-                Renderer.Render(Actor.CameraRig.OutputCamera, m_Tick.DriveStatus.RenderFrame);
+            {
+                RuntimeDiagnosticsTargetRegistry.TryGetByHost(Actor.GetInstanceID(), out RuntimeDiagnosticsTarget target);
+                Renderer.Render(Actor.CameraRig.OutputCamera, m_Tick.DriveStatus.RenderFrame, target.Context);
+            }
         }
 
         void Update()

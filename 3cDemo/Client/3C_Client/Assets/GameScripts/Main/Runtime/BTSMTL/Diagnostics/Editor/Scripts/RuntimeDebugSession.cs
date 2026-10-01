@@ -86,6 +86,19 @@ namespace BTSMTL.Diagnostics.Editor
                 m_HistorySequence);
         }
 
+        public bool TryGetHistoryEvent(out RuntimeTraceEvent traceEvent)
+        {
+            traceEvent = default;
+            if (m_AttachmentState is not RuntimeDebugAttachmentState.CaptureHistory and not RuntimeDebugAttachmentState.Ended ||
+                m_CaptureSnapshot == null)
+                return false;
+            ReadOnlySpan<RuntimeTraceEvent> events = m_CaptureSnapshot.GetEvents(0, m_HistorySequence);
+            if (events.Length == 0)
+                return false;
+            traceEvent = events[events.Length - 1];
+            return true;
+        }
+
         public bool TrySeekExecutionPosition(RuntimeTraceDomain domain, ulong position, Guid branch, ulong epoch)
         {
             RuntimeCaptureSnapshot snapshot = GetExecutionCapture();

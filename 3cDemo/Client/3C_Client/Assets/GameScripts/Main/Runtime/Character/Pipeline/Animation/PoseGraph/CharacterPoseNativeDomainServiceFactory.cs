@@ -185,6 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         m_AnimationContributionCapacity),
                 constraints,
                 worldContext,
+                m_SourceCatalog,
                 owned);
             }
             catch
@@ -903,17 +904,20 @@ internal sealed class CharacterPoseNativeDomainServiceSet : IDisposable
         CharacterPoseNativeDomainServices services,
         CharacterPoseConstraintRuntime constraints,
         CharacterPoseWorldContextAdapter worldContext,
+        CharacterPoseNativeSourceResourceCatalog animationResources,
         IReadOnlyList<IDisposable> ownedResources)
     {
         Services = services ?? throw new ArgumentNullException(nameof(services));
         Constraints = constraints ?? throw new ArgumentNullException(nameof(constraints));
         WorldContext = worldContext ?? throw new ArgumentNullException(nameof(worldContext));
+        AnimationResources = animationResources;
         m_OwnedResources = ownedResources ?? throw new ArgumentNullException(nameof(ownedResources));
     }
 
     internal CharacterPoseNativeDomainServices Services { get; }
     internal CharacterPoseConstraintRuntime Constraints { get; }
     internal CharacterPoseWorldContextAdapter WorldContext { get; }
+    internal CharacterPoseNativeSourceResourceCatalog AnimationResources { get; }
     public void Dispose()
     {
         if (m_Disposed)

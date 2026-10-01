@@ -125,6 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_PoseActionPublisher == null)
                 throw new InvalidOperationException("Timeline playback requires a composed Pose Action command publisher.");
             m_TimelineHost = timelineHost;
+            timelineHost.Content.BindAnimationResources(m_PoseDomain.Session.AnimationResources);
             timelineHost.PresentationFramePrepared += OnTimelinePresentationFramePrepared;
             timelineHost.Initialize(numericTarget, tickRate);
             BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(

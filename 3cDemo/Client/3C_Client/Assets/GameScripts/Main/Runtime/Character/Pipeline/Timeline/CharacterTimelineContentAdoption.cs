@@ -68,17 +68,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             string contentRevision)
         {
             m_Snapshots = new ReadOnlyCollection<CharacterTimelineContentSnapshot>(
-                new List<CharacterTimelineContentSnapshot>(snapshots ?? Array.Empty<CharacterTimelineContentSnapshot>()));
-            AuthoringRevision = authoringRevision ?? string.Empty;
-            ContentRevision = contentRevision ?? string.Empty;
+                new List<CharacterTimelineContentSnapshot>(snapshots));
+            AuthoringRevision = authoringRevision;
+            ContentRevision = contentRevision;
         }
 
         public IReadOnlyList<CharacterTimelineContentSnapshot> Snapshots => m_Snapshots;
         public string AuthoringRevision { get; }
         public string ContentRevision { get; }
-        public bool IsValid => m_Snapshots.Count != 0 &&
-                               !string.IsNullOrEmpty(AuthoringRevision) &&
-                               !string.IsNullOrEmpty(ContentRevision);
     }
 
     public sealed class CharacterTimelineContentAdoptionPlan
@@ -87,27 +84,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             CharacterTimelineContentExport export,
             Guid sessionIdentity,
             ulong sessionContentGeneration,
-            bool compatible,
             string message)
         {
             Export = export;
             SessionIdentity = sessionIdentity;
             SessionContentGeneration = sessionContentGeneration;
-            IsCompatible = compatible;
-            Message = message ?? string.Empty;
+            Message = message;
         }
 
         public CharacterTimelineContentExport Export { get; }
-        public IReadOnlyList<CharacterTimelineContentSnapshot> Snapshots => Export?.Snapshots ?? Array.Empty<CharacterTimelineContentSnapshot>();
-        public string AuthoringRevision => Export?.AuthoringRevision ?? string.Empty;
-        public string ContentRevision => Export?.ContentRevision ?? string.Empty;
+        public IReadOnlyList<CharacterTimelineContentSnapshot> Snapshots => Export.Snapshots;
+        public string AuthoringRevision => Export.AuthoringRevision;
+        public string ContentRevision => Export.ContentRevision;
         public Guid SessionIdentity { get; }
         public ulong SessionContentGeneration { get; }
-        public bool IsCompatible { get; }
         public string Message { get; }
-        public bool IsValid => Export != null && Export.IsValid &&
-                               SessionIdentity != Guid.Empty &&
-                               SessionContentGeneration != 0;
     }
 
     public sealed class CharacterTimelineContentPublication
@@ -117,17 +108,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             string message)
         {
             Plan = plan;
-            AuthoringRevision = plan?.AuthoringRevision ?? string.Empty;
-            ContentRevision = plan?.ContentRevision ?? string.Empty;
-            Message = message ?? string.Empty;
+            AuthoringRevision = plan.AuthoringRevision;
+            ContentRevision = plan.ContentRevision;
+            Message = message;
         }
 
         public CharacterTimelineContentAdoptionPlan Plan { get; }
         public string AuthoringRevision { get; }
         public string ContentRevision { get; }
         public string Message { get; }
-        public bool IsValid => Plan != null && Plan.IsValid &&
-                               !string.IsNullOrEmpty(AuthoringRevision) &&
-                               !string.IsNullOrEmpty(ContentRevision);
     }
 }

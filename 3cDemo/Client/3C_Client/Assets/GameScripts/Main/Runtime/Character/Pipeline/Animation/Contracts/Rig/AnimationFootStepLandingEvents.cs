@@ -369,8 +369,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class AnimationFootStepLandingEventTable
     {
-        internal const float NormalizedBoundaryTolerance = 0.000001f;
-
         [SerializeField] AnimationFootStepLandingEvent[] m_Events =
             Array.Empty<AnimationFootStepLandingEvent>();
 
@@ -411,12 +409,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     0f);
             }
 
-            float boundaryTime = normalizedTime + NormalizedBoundaryTolerance;
+            const float boundaryTolerance = 0.000001f;
             int previousIndex = -1;
             int nextIndex = -1;
             for (int i = 0; i < m_Events.Length; i++)
             {
-                if (m_Events[i].NormalizedTime <= boundaryTime)
+                if (m_Events[i].NormalizedTime <= normalizedTime + boundaryTolerance)
                 {
                     previousIndex = i;
                     continue;
@@ -473,24 +471,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationFootStepLandingEvent nextEvent = m_Events[nextIndex];
             AnimationFootMotionEventOccurrence nextLanding =
                 Occurrence(nextEvent, nextCycle);
-            double sourceTime = (double)sourceCycle + normalizedTime;
-            double landingTime = (double)nextLanding.LandingCycle + nextEvent.NormalizedTime;
+            double sourceTime = sourceCycle + normalizedTime;
+            double landingTime = nextLanding.LandingCycle + nextEvent.NormalizedTime;
             float timeToLandingSeconds = (float)(
                 (landingTime - sourceTime) * sourceDurationSeconds);
-            float timeToleranceSeconds = NormalizedBoundaryTolerance * sourceDurationSeconds;
-            if (!float.IsFinite(timeToLandingSeconds) || timeToLandingSeconds < -timeToleranceSeconds)
+            if (!float.IsFinite(timeToLandingSeconds) || timeToLandingSeconds < -0.0001f)
                 throw new InvalidOperationException("Foot Motion Event time is invalid.");
             timeToLandingSeconds = Mathf.Max(0f, timeToLandingSeconds);
             bool hasApproachContactRange =
-                nextEvent.ApproachContactLeadSeconds > 0f;
+                nextEvent.ApproachContactLeadSeconds > boundaryTolerance;
             AnimationFootMotionEventPhase phase =
                 hasApproachContactRange &&
                 timeToLandingSeconds <=
-                nextEvent.ApproachContactLeadSeconds + timeToleranceSeconds
+                nextEvent.ApproachContactLeadSeconds + 0.0001f
                     ? AnimationFootMotionEventPhase.ApproachContact
-                    : timeToLandingSeconds <= nextEvent.SwingLeadSeconds + timeToleranceSeconds
+                    : timeToLandingSeconds <= nextEvent.SwingLeadSeconds + 0.0001f
                         ? AnimationFootMotionEventPhase.Swing
-                        : timeToLandingSeconds <= nextEvent.PreSwingLeadSeconds + timeToleranceSeconds
+                        : timeToLandingSeconds <= nextEvent.PreSwingLeadSeconds + 0.0001f
                             ? AnimationFootMotionEventPhase.PreSwing
                             : currentContact.IsValid
                                 ? AnimationFootMotionEventPhase.Contact

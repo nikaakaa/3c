@@ -132,22 +132,31 @@ namespace ThirdPersonCamera
             m_CompletedToRemove.Clear();
             AddRequests(newRequests);
             ApplyPendingRetirements();
+            m_VisibleStates.Clear();
+            for (int i = 0; i < m_States.Active.Count; i++)
+                m_VisibleStates.Add(m_States.Active[i]);
         }
 
         internal float ResolveElevation(float elevation, bool rotationControl, in CameraFrameInput input) =>
             m_Pitch.Evaluate(m_States.Active, elevation, rotationControl, in input);
+
+        internal CameraFramePlan ApplyFraming(CameraFramePlan plan, in CameraFrameInput input)
+        {
+            for (int i = 0; i < m_Owners.Length; i++)
+                if (m_Owners[i].Stage <= CameraEffectStage.Stretch)
+                    plan = m_Owners[i].Apply(plan, m_VisibleStates, in input);
+            return plan;
+        }
 
         public CameraFramePlan Resolve(
             CameraFramePlan basePlan,
             IReadOnlyList<CameraEffectRequest> newRequests,
             in CameraFrameInput input)
         {
-            m_VisibleStates.Clear();
-            for (int i = 0; i < m_States.Active.Count; i++)
-                m_VisibleStates.Add(m_States.Active[i]);
             CameraFramePlan plan = basePlan;
             for (int i = 0; i < m_Owners.Length; i++)
-                plan = m_Owners[i].Apply(plan, m_VisibleStates, in input);
+                if (m_Owners[i].Stage > CameraEffectStage.Stretch)
+                    plan = m_Owners[i].Apply(plan, m_VisibleStates, in input);
             m_Contributions.Clear();
             for (int i = 0; i < m_States.Active.Count; i++)
             {

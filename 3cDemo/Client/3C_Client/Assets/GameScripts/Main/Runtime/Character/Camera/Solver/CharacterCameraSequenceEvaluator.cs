@@ -93,6 +93,7 @@ namespace ThirdPersonCamera
             m_FramePlanner.ApplyElevation(effects.ResolveElevation(
                 m_FramePlanner.ElevationWithOverrun, m_FramePlanner.HasRotationControl, in input));
             CameraFramePlan target = m_Transition.Evaluate(in input, in request, look);
+            target = effects.ApplyFraming(target, in input);
             CameraDelayOrbitSettings delay = m_Delay.Evaluate(in input, m_FramePlanner.HasRotationControl, m_FramePlanner.ElevationRatio);
             return m_WorldBasicHistory.Apply(target, in input, delay,
                 m_Delay.MinimumDistanceRatio, m_Projection.Delay.Muted);
@@ -143,7 +144,6 @@ namespace ThirdPersonCamera
                     Vector3.ProjectOnPlane(offset, Vector3.up));
                 pivot = target.PivotLocation + orbitDelta * (pivot - target.PivotLocation);
             }
-            m_PreviousOffset = offset;
             float directionRatio = m_Direction.Evaluate(delaySettings.FollowDirection, m_Current.Rotation);
             Vector3 damping = delaySettings.FollowPositionDamping;
             damping.x *= directionRatio;
@@ -154,20 +154,20 @@ namespace ThirdPersonCamera
             Vector3 localDelta = Quaternion.Inverse(dampingSpace) * (target.PivotLocation - pivot);
             pivot += dampingSpace * Cinemachine.Utility.Damper.Damp(localDelta, damping, delta);
             pivot.y = previousY + Cinemachine.Utility.Damper.Damp(verticalDelta, damping.y * directionRatio, delta);
-            Vector3 cameraLocation = m_Current.Location;
+            Vector3 previousNominal = Quaternion.Inverse(m_Current.Rotation) * -m_PreviousOffset;
+            Vector2 previousComposition = m_Current.Offset - new Vector2(previousNominal.x, previousNominal.y);
+            Vector2 composition = targetData.Offset + m_Current.WithOffset(previousComposition)
+                .WithFraming(targetData.Radius, targetData.FieldOfView).Offset;
+            Vector3 cameraLocation = pivot - targetData.Rotation *
+                new Vector3(composition.x, composition.y, targetData.Radius);
             Vector3 localTarget = Quaternion.Inverse(targetData.Rotation) * (targetData.PivotLocation - cameraLocation);
             float screenSize = Mathf.Tan(targetData.FieldOfView * 0.5f * Mathf.Deg2Rad) * localTarget.z;
             Vector2 compositionOffset = ResolveCompositionOffset(
                 new Vector2(localTarget.x, localTarget.y),
                 delaySettings,
                 input.PixelWidth / (float)input.PixelHeight,
-                screenSize);
-            compositionOffset = Cinemachine.Utility.Damper.Damp(
-                compositionOffset,
-                new Vector3(delaySettings.CompositionDamping.x, delaySettings.CompositionDamping.y, 0f),
+                screenSize,
                 delta);
-            Vector3 localCameraToPivot = Quaternion.Inverse(targetData.Rotation) * targetData.CameraToPivot -
-                new Vector3(compositionOffset.x, compositionOffset.y, 0f);
             Vector3 horizontalOffset = Vector3.ProjectOnPlane(offset, Vector3.up);
             float minimumDistance = horizontalOffset.magnitude * Mathf.Max(0.2f, minimumDistanceRatio);
             Vector3 actualTarget = Vector3.ProjectOnPlane(target.PivotLocation, Vector3.up);
@@ -183,9 +183,8 @@ namespace ThirdPersonCamera
                     : direction / length;
                 pivot += direction * (minimumDistance - distance);
             }
-            CameraWorldBasicData framed = targetData.WithPivotLocation(pivot).WithOffset(
-                new Vector2(localCameraToPivot.x, localCameraToPivot.y));
-            m_Current = framed;
+            m_PreviousOffset = offset;
+            m_Current = targetData.WithPivotLocation(pivot).WithOffset(composition - compositionOffset);
             return target.WithWorldBasicData(m_Current);
         }
 
@@ -193,7 +192,8 @@ namespace ThirdPersonCamera
             Vector2 targetPosition,
             CameraDelayOrbitSettings settings,
             float aspectRatio,
-            float screenSize)
+            float screenSize,
+            float delta)
         {
             Rect deadRect = ScreenRectToOrtho(new Rect(
                 settings.ScreenPosition.x - settings.DeadZone.x * 0.5f,
@@ -201,6 +201,8 @@ namespace ThirdPersonCamera
                 settings.DeadZone.x,
                 settings.DeadZone.y), aspectRatio, screenSize);
             Vector2 offset = OrthoOffsetToScreenRect(targetPosition, deadRect);
+            offset = Cinemachine.Utility.Damper.Damp(offset,
+                new Vector3(settings.CompositionDamping.x, settings.CompositionDamping.y, 0f), delta);
 
             Vector2 softCenter = settings.ScreenPosition + Vector2.Scale(
                 settings.Bias, settings.SoftZone - settings.DeadZone);

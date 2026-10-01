@@ -110,9 +110,12 @@ namespace ThirdPersonCamera
         {
             if (!float.IsFinite(minimum) || !float.IsFinite(maximum) || minimum > maximum)
                 throw new ArgumentOutOfRangeException(nameof(minimum));
+            float currentPitch = Pitch;
+            float pitch = Mathf.Clamp(currentPitch, minimum, maximum);
+            if (pitch == currentPitch)
+                return this;
             Vector3 euler = Rotation.eulerAngles;
-            float pitch = Mathf.Clamp(Pitch, minimum, maximum);
-            return WithRotation(Quaternion.Euler(pitch, euler.y, euler.z));
+            return WithRotation(Quaternion.Euler(-pitch, euler.y, euler.z));
         }
 
         public CameraFramePlan WithLens(CameraLensPlan lens)

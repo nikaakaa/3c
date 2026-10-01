@@ -1,13 +1,14 @@
 # 相机进展与证据入口
 
-整理日期：2026-09-30。完整可琳相机复刻仍未完成。本页组织读取入口，资源数量、公式、配置和详细消费者核对由下面的原文拥有。
+整理日期：2026-10-01。完整可琳相机复刻仍未完成。当前已修正构图历史逐帧往返与 Pitch 限位符号翻转，Zoom／Stretch 的当帧参数已进入 Delay。生产函数检查和 Unity 编译通过，实机画面尚未验收。
 
 ## 当前读取顺序
 
-1. [最新实施记录](../diagnostics/camera/corin-camera-implementation-20260929.md)：当前交付、各批次修正和剩余范围。
-2. [完整链路审计](../diagnostics/camera/corin-camera-completion-audit-20260929.md)：区分 Profile 常驻资源、静态引用和真正进入求值器的资源；这是审计时点的快照。
-3. [震动时钟与升降资格](../diagnostics/camera/corin-camera-clock-and-vertical-20260929.md)：原生时钟、取消和资格证据。
-4. [震动原生消费者依据](../reference/camera/corin-camera-shake-source-parity-20260928.md)：信号、空间衰减、仲裁与取证边界。
+1. [当前求值链](../路径/可琳相机求值链.md)与[本次检查](../测试/可琳相机构图与仰角检查.md)：当前输入、处理顺序、输出及本次已确认的修正。
+2. [实施记录](../diagnostics/camera/corin-camera-implementation-20260929.md)：此前各批次修正和历史验证范围。
+3. [完整链路审计](../diagnostics/camera/corin-camera-completion-audit-20260929.md)：区分 Profile 常驻资源、静态引用和真正进入求值器的资源；这是审计时点的快照。
+4. [震动时钟与升降资格](../diagnostics/camera/corin-camera-clock-and-vertical-20260929.md)：原生时钟、取消和资格证据。
+5. [震动原生消费者依据](../reference/camera/corin-camera-shake-source-parity-20260928.md)：信号、空间衰减、仲裁与取证边界。
 
 ## 未闭环范围与职责
 

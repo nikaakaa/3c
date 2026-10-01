@@ -174,8 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 m_PageScope = scope;
                 m_PageGraphAuthoringId = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
-                var request = new RuntimeDebugTargetRequest(RuntimeSourceElementKey.Graph(((IBtsmtlSkillFlowGraph)graph).AuthoringId),
-                    new BtsmtlSkillGraphFingerprint().Compute(graph));
+                RuntimeDebugTargetRequest request = RuntimeDebugSourceNavigator.CreateTargetRequest(m_Definition, graph);
                 m_Observation = BtsmtlSkillFlowObservation.ForScope(graph, m_Session, request, scope.Root.CharacterRuntimeId, scope.Resolve);
                 m_Observation.CaptureValues = m_CaptureValues;
                 m_Observation.SetParentNavigation(CanNavigateParent, NavigateParent, OnTimelineOpening);
@@ -365,10 +364,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         FlowGraph FindGraph(string identity)
         {
-            IReadOnlyList<BtsmtlSkillFlowGraph> roots = m_Definition.AbilityGraphs;
-            return roots.Where(graph => graph != null)
-            .SelectMany(graph => BtsmtlSkillGraphClosure.Validate(graph, false)).Distinct()
-            .Single(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == identity);
+            return RuntimeDebugSourceNavigator.ResolveGraph(m_Definition, identity);
         }
 
         static bool SameRelease(RuntimeInstanceKey left, RuntimeInstanceKey right) =>

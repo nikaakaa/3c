@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
+using NodeCanvas.Framework;
 using ThirdPersonCharacter.Pipeline;
 
 namespace ThirdPersonCharacter.Control.Authoring
@@ -17,6 +19,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             new Dictionary<string, BtsmtlSkillNativeStateMachine>(StringComparer.Ordinal);
         public readonly Dictionary<string, TimelineAsset> Timelines =
             new Dictionary<string, TimelineAsset>(StringComparer.Ordinal);
+        public readonly Dictionary<RuntimeSourceElementKey, IGraphElement> Elements = new();
         readonly HashSet<FlowGraph> m_Visited = new HashSet<FlowGraph>();
         readonly HashSet<BtsmtlSkillNativeStateMachine> m_VisitedStateMachines =
             new HashSet<BtsmtlSkillNativeStateMachine>();
@@ -26,6 +29,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             Graphs.Clear();
             StateMachines.Clear();
             Timelines.Clear();
+            Elements.Clear();
             m_Visited.Clear();
             m_VisitedStateMachines.Clear();
             IReadOnlyList<BtsmtlSkillFlowGraph> roots = definition.AbilityGraphs;
@@ -42,6 +46,12 @@ namespace ThirdPersonCharacter.Control.Authoring
             Graphs.Add(authoring.AuthoringId, graph);
             foreach (FlowNode node in graph.allNodes.OfType<FlowNode>())
             {
+                Elements.Add(RuntimeSourceElementKey.Node(authoring.AuthoringId, node.UID), node);
+                for (int i = 0; i < node.outConnections.Count; i++)
+                {
+                    Connection edge = node.outConnections[i];
+                    Elements.Add(RuntimeSourceElementKey.Edge(authoring.AuthoringId, edge.UID), edge);
+                }
                 if (node is MacroNodeWrapper macro && macro.macro is BtsmtlSkillMacroGraph macroGraph)
                     Visit(macroGraph);
                 if (node is BtsmtlSkillStateMachineFlowNode machine)
@@ -77,7 +87,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (machine == null || !m_VisitedStateMachines.Add(machine))
                 return;
-            BtsmtlSkillNativeStateMachineContract.Validate(machine, false);
             if (StateMachines.TryGetValue(machine.AuthoringId, out BtsmtlSkillNativeStateMachine existing) &&
                 existing != machine)
                 throw new InvalidOperationException($"Skill StateMachine identity重复：{machine.AuthoringId}");

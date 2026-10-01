@@ -9,13 +9,15 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
     {
         readonly struct Projection
         {
-            internal Projection(RuntimeSourceElementHandle source, string invocation)
+            internal Projection(RuntimeSourceElementHandle source, string invocation, string operationIdentity)
             {
                 Source = source;
                 Invocation = invocation;
+                OperationIdentity = operationIdentity;
             }
             internal RuntimeSourceElementHandle Source { get; }
             internal string Invocation { get; }
+            internal string OperationIdentity { get; }
         }
 
         readonly RuntimeDiagnosticsContext m_Context;
@@ -35,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     m_Ports.Add(key, projections = new List<Projection>());
                 if (!context.SourceMap.TryGetHandle(RuntimeSourceElementKey.Port(source.GraphId, source.NodeId, source.PortId), out RuntimeSourceElementHandle handle))
                     throw new InvalidOperationException("编译值端口缺少对应的诊断来源。");
-                projections.Add(new Projection(handle, source.SourceInvocationPath));
+                projections.Add(new Projection(handle, source.SourceInvocationPath, source.TargetIndex.ToString()));
             }
         }
 
@@ -45,16 +47,18 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         {
             if (!m_Ports.TryGetValue((operation, port, direction), out List<Projection> projections))
                 return;
+            if (!m_Context.ShouldPublish(RuntimeTraceChannel.Values, RuntimeTraceEventKind.ValueSampled))
+                return;
             foreach (Projection projection in projections)
             {
                 RuntimeInstanceKey instance = actionInstanceId != 0
                     ? RuntimeInstanceKey.SkillExecution(m_Context.CharacterRuntimeId, m_ExecutionId, skillId,
                         actionInstanceId, projection.Invocation, skillGeneration, invocationGeneration)
-                    : RuntimeInstanceKey.Runnable(m_Context.CharacterRuntimeId, m_ExecutionId, operation.ToString(), nodeGeneration);
+                    : RuntimeInstanceKey.Runnable(m_Context.CharacterRuntimeId, m_ExecutionId, projection.OperationIdentity, nodeGeneration);
                 m_Context.Publish(RuntimeTraceChannel.Values, RuntimeTraceDomain.Logic, RuntimeTraceEventKind.ValueSampled,
                     projection.Source, instance, new RuntimeTracePayload
                     {
-                        Name = direction.ToString(),
+                        Name = direction == ProgramValuePortDirection.Input ? "Input" : "Output",
                         Status = "Sampled",
                         Flag = true,
                         SkillId = skillId,

@@ -54,7 +54,7 @@ namespace BTSMTL.Diagnostics
 
     public readonly struct RuntimeLiveStateKey : IEquatable<RuntimeLiveStateKey>
     {
-        public RuntimeLiveStateKey(RuntimeTraceEvent traceEvent)
+        public RuntimeLiveStateKey(in RuntimeTraceEvent traceEvent)
         {
             Channel = traceEvent.Channel;
             Source = traceEvent.Source;
@@ -84,7 +84,7 @@ namespace BTSMTL.Diagnostics
 
     public readonly struct RuntimeLiveStateChange
     {
-        public RuntimeLiveStateChange(long revision, RuntimeLiveStateKey key, RuntimeTraceEvent traceEvent)
+        public RuntimeLiveStateChange(long revision, RuntimeLiveStateKey key, in RuntimeTraceEvent traceEvent)
         {
             Revision = revision;
             Key = key;
@@ -236,73 +236,74 @@ namespace BTSMTL.Diagnostics
 
     sealed class RuntimeLiveStateStore
     {
-        readonly Dictionary<RuntimeLiveStateKey, RuntimeTraceEvent> m_Current;
-        readonly Queue<RuntimeLiveStateChange> m_Changes;
-        readonly LinkedList<RuntimeLiveStateKey> m_Recency = new();
-        readonly Dictionary<RuntimeLiveStateKey, LinkedListNode<RuntimeLiveStateKey>> m_RecencyNodes;
-        readonly LinkedListNode<RuntimeLiveStateKey>[] m_RecencyNodePool;
+        readonly Dictionary<RuntimeLiveStateKey, LinkedListNode<int>> m_Current;
+        readonly RuntimeTraceEvent[] m_States;
+        readonly RuntimeLiveStateChange[] m_Changes;
+        readonly LinkedList<int> m_Recency = new();
+        readonly LinkedListNode<int>[] m_RecencyNodePool;
         readonly int m_MaxChanges;
         long m_Version;
         long m_LastEvictionVersion;
         long m_EvictedStates;
         int m_RecencyNodePoolCount;
+        int m_ChangeHead;
+        int m_ChangeCount;
 
         public RuntimeLiveStateStore(int maxChanges = 4096)
         {
             if (maxChanges < 64)
                 throw new ArgumentOutOfRangeException(nameof(maxChanges));
             m_MaxChanges = maxChanges;
-            m_Current = new Dictionary<RuntimeLiveStateKey, RuntimeTraceEvent>(maxChanges + 1);
-            m_Changes = new Queue<RuntimeLiveStateChange>(maxChanges + 1);
-            m_RecencyNodes = new Dictionary<RuntimeLiveStateKey, LinkedListNode<RuntimeLiveStateKey>>(maxChanges + 1);
-            m_RecencyNodePool = new LinkedListNode<RuntimeLiveStateKey>[m_MaxChanges];
+            m_Current = new Dictionary<RuntimeLiveStateKey, LinkedListNode<int>>(maxChanges);
+            m_States = new RuntimeTraceEvent[maxChanges];
+            m_Changes = new RuntimeLiveStateChange[maxChanges];
+            m_RecencyNodePool = new LinkedListNode<int>[m_MaxChanges];
             for (int i = 0; i < m_RecencyNodePool.Length; i++)
-                m_RecencyNodePool[i] = new LinkedListNode<RuntimeLiveStateKey>(default);
+                m_RecencyNodePool[i] = new LinkedListNode<int>(i);
             m_RecencyNodePoolCount = m_RecencyNodePool.Length;
         }
 
         public long Version => m_Version;
         public int Capacity => m_MaxChanges;
 
-        public bool Upsert(RuntimeTraceEvent traceEvent)
+        public bool Upsert(in RuntimeTraceEvent traceEvent)
         {
-            var key = new RuntimeLiveStateKey(traceEvent);
-            if (m_Current.TryGetValue(key, out RuntimeTraceEvent current))
+            var key = new RuntimeLiveStateKey(in traceEvent);
+            if (m_Current.TryGetValue(key, out LinkedListNode<int> recent))
             {
-                LinkedListNode<RuntimeLiveStateKey> recent = m_RecencyNodes[key];
-                m_Recency.Remove(recent);
-                m_Recency.AddLast(recent);
-                if (StateEquivalent(current, traceEvent))
+                if (recent.Next != null)
+                {
+                    m_Recency.Remove(recent);
+                    m_Recency.AddLast(recent);
+                }
+                if (StateEquivalent(in m_States[recent.Value], in traceEvent))
                     return false;
             }
             else
             {
-                LinkedListNode<RuntimeLiveStateKey> recent;
                 if (m_Current.Count == m_MaxChanges)
                 {
                     recent = m_Recency.First;
-                    RuntimeLiveStateKey oldest = recent.Value;
+                    var oldest = new RuntimeLiveStateKey(in m_States[recent.Value]);
                     m_Recency.RemoveFirst();
-                    m_RecencyNodes.Remove(oldest);
                     m_Current.Remove(oldest);
                     m_LastEvictionVersion = m_Version + 1;
                     m_EvictedStates++;
-                    recent.Value = key;
-                    m_Recency.AddLast(recent);
                 }
                 else
-                {
-                    recent = AcquireRecencyNode(key);
-                    m_Recency.AddLast(recent);
-                }
-                m_RecencyNodes.Add(key, recent);
+                    recent = m_RecencyNodePool[--m_RecencyNodePoolCount];
+                m_Recency.AddLast(recent);
+                m_Current.Add(key, recent);
             }
 
             m_Version++;
-            m_Current[key] = traceEvent;
-            m_Changes.Enqueue(new RuntimeLiveStateChange(m_Version, key, traceEvent));
-            if (m_Changes.Count > m_MaxChanges)
-                m_Changes.Dequeue();
+            m_States[recent.Value] = traceEvent;
+            int nextChange = (m_ChangeHead + m_ChangeCount) % m_MaxChanges;
+            m_Changes[nextChange] = new RuntimeLiveStateChange(m_Version, key, in traceEvent);
+            if (m_ChangeCount == m_MaxChanges)
+                m_ChangeHead = (m_ChangeHead + 1) % m_MaxChanges;
+            else
+                m_ChangeCount++;
             return true;
         }
 
@@ -311,31 +312,31 @@ namespace BTSMTL.Diagnostics
             destination.Clear();
             if (cursor >= m_Version)
                 return new RuntimeLiveStateRead(m_Version, false, destination, m_EvictedStates);
-            long earliestAvailable = m_Changes.Count > 0 ? m_Changes.Peek().Revision : m_Version + 1;
+            long earliestAvailable = m_Version - m_ChangeCount + 1;
             if (cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion)
             {
-                foreach (KeyValuePair<RuntimeLiveStateKey, RuntimeTraceEvent> pair in m_Current)
-                    destination.Add(new RuntimeLiveStateChange(m_Version, pair.Key, pair.Value));
+                foreach (KeyValuePair<RuntimeLiveStateKey, LinkedListNode<int>> pair in m_Current)
+                    destination.Add(new RuntimeLiveStateChange(m_Version, pair.Key, in m_States[pair.Value.Value]));
                 return new RuntimeLiveStateRead(m_Version, true, destination, m_EvictedStates);
             }
-            foreach (RuntimeLiveStateChange change in m_Changes)
-                if (change.Revision > cursor)
-                    destination.Add(change);
+            int first = m_ChangeCount - (int)(m_Version - cursor);
+            for (int i = first; i < m_ChangeCount; i++)
+                destination.Add(m_Changes[(m_ChangeHead + i) % m_MaxChanges]);
             return new RuntimeLiveStateRead(m_Version, false, destination, m_EvictedStates);
         }
 
         public void RemoveChannels(RuntimeTraceChannel channels)
         {
             bool changed = false;
-            LinkedListNode<RuntimeLiveStateKey> node = m_Recency.First;
+            LinkedListNode<int> node = m_Recency.First;
             while (node != null)
             {
-                LinkedListNode<RuntimeLiveStateKey> next = node.Next;
-                RuntimeLiveStateKey key = node.Value;
-                if ((key.Channel & channels) != 0)
+                LinkedListNode<int> next = node.Next;
+                if ((m_States[node.Value].Channel & channels) != 0)
                 {
+                    var key = new RuntimeLiveStateKey(in m_States[node.Value]);
                     m_Current.Remove(key);
-                    m_RecencyNodes.Remove(key);
+                    m_States[node.Value] = default;
                     m_Recency.Remove(node);
                     ReturnRecencyNode(node);
                     changed = true;
@@ -344,7 +345,7 @@ namespace BTSMTL.Diagnostics
             }
             if (changed)
             {
-                m_Changes.Clear();
+                ClearChanges();
                 m_Version++;
                 m_LastEvictionVersion = m_Version;
             }
@@ -353,31 +354,28 @@ namespace BTSMTL.Diagnostics
         public void Clear()
         {
             m_Current.Clear();
-            m_Changes.Clear();
+            Array.Clear(m_States, 0, m_States.Length);
+            ClearChanges();
             while (m_Recency.Count > 0)
             {
-                LinkedListNode<RuntimeLiveStateKey> node = m_Recency.First;
+                LinkedListNode<int> node = m_Recency.First;
                 m_Recency.RemoveFirst();
                 ReturnRecencyNode(node);
             }
-            m_RecencyNodes.Clear();
             m_EvictedStates = 0;
             m_Version++;
             m_LastEvictionVersion = m_Version;
         }
 
-        LinkedListNode<RuntimeLiveStateKey> AcquireRecencyNode(RuntimeLiveStateKey key)
+        void ClearChanges()
         {
-            LinkedListNode<RuntimeLiveStateKey> node = m_RecencyNodePoolCount > 0
-                ? m_RecencyNodePool[--m_RecencyNodePoolCount]
-                : new LinkedListNode<RuntimeLiveStateKey>(key);
-            node.Value = key;
-            return node;
+            Array.Clear(m_Changes, 0, m_Changes.Length);
+            m_ChangeHead = 0;
+            m_ChangeCount = 0;
         }
 
-        void ReturnRecencyNode(LinkedListNode<RuntimeLiveStateKey> node)
+        void ReturnRecencyNode(LinkedListNode<int> node)
         {
-            node.Value = default;
             m_RecencyNodePool[m_RecencyNodePoolCount++] = node;
         }
 
@@ -390,12 +388,8 @@ namespace BTSMTL.Diagnostics
                 return false;
             RuntimeTracePayload leftPayload = left.Payload;
             RuntimeTracePayload rightPayload = right.Payload;
-            return left.Channel == right.Channel &&
-                   left.Domain == right.Domain &&
+            return left.Domain == right.Domain &&
                    left.ExecutionBranchId == right.ExecutionBranchId &&
-                   left.RuntimeInstance.Equals(right.RuntimeInstance) &&
-                   left.Source.Equals(right.Source) &&
-                   left.Kind == right.Kind &&
                    PayloadEquivalent(in leftPayload, in rightPayload);
         }
 
@@ -739,9 +733,11 @@ namespace BTSMTL.Diagnostics
         readonly RuntimeLiveStateStore m_LiveState = new RuntimeLiveStateStore();
         RuntimeCaptureStore m_Capture;
         RuntimeTraceChannel m_LiveChannels;
+        volatile int m_LiveChannelBits;
         long m_LiveStateGeneration;
         RuntimeTraceChannel m_CaptureChannels;
-        RuntimeDiagnosticsCaptureDetail m_CaptureDetail;
+        volatile int m_CaptureChannelBits;
+        volatile RuntimeDiagnosticsCaptureDetail m_CaptureDetail;
         bool m_Terminated;
         bool m_Disposed;
 
@@ -756,11 +752,7 @@ namespace BTSMTL.Diagnostics
 
         public RuntimeTraceChannel EffectiveChannels
         {
-            get
-            {
-                lock (m_Gate)
-                    return m_LiveChannels | m_CaptureChannels;
-            }
+            get => (RuntimeTraceChannel)(m_LiveChannelBits | m_CaptureChannelBits);
         }
 
         public bool IsCaptureRecording
@@ -822,10 +814,11 @@ namespace BTSMTL.Diagnostics
 
         public bool IsInterested(RuntimeTraceChannel channel, RuntimeTraceEventKind kind)
         {
-            lock (m_Gate)
-                return !m_Disposed && !m_Terminated && ((m_LiveChannels & channel) != 0 ||
-                    m_Capture != null && (m_CaptureChannels & channel) != 0 && m_CaptureDetail >= RequiredCaptureDetail(kind));
+            return ShouldPublish(channel, kind);
         }
+
+        public bool IsLiveInterested(RuntimeTraceChannel channel) =>
+            (m_LiveChannelBits & (int)channel) != 0;
 
         public bool BeginCapture(RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail, out Guid captureId)
         {
@@ -850,11 +843,13 @@ namespace BTSMTL.Diagnostics
                     m_Capture = new RuntimeCaptureStore(captureId, detail);
                     m_CaptureChannels = channels;
                     m_CaptureDetail = detail;
+                    m_CaptureChannelBits = (int)channels;
                     return true;
                 }
 
                 captureId = m_Capture.CaptureId;
                 m_CaptureChannels |= channels;
+                m_CaptureChannelBits = (int)m_CaptureChannels;
                 if (detail > m_CaptureDetail)
                 {
                     m_CaptureDetail = detail;
@@ -875,6 +870,7 @@ namespace BTSMTL.Diagnostics
                 m_Capture.Dispose();
                 m_Capture = null;
                 m_CaptureChannels = RuntimeTraceChannel.None;
+                m_CaptureChannelBits = 0;
                 m_CaptureDetail = RuntimeDiagnosticsCaptureDetail.None;
                 return snapshot;
             }
@@ -917,48 +913,33 @@ namespace BTSMTL.Diagnostics
 
         public bool ShouldPublish(RuntimeTraceChannel channel, RuntimeTraceEventKind kind)
         {
-            lock (m_Gate)
-            {
-                if (m_Disposed || m_Terminated)
-                    return false;
-                bool live = (m_LiveChannels & channel) != 0;
-                bool capture = m_Capture != null &&
-                               (m_CaptureChannels & channel) != 0 &&
-                               m_CaptureDetail >= RequiredCaptureDetail(kind);
-                return live || capture;
-            }
+            return IsLiveInterested(channel) || ShouldCapture(channel, kind);
         }
 
         public bool ShouldCapture(RuntimeTraceChannel channel, RuntimeTraceEventKind kind)
         {
-            lock (m_Gate)
-            {
-                return !m_Disposed &&
-                       !m_Terminated &&
-                       m_Capture != null &&
-                       (m_CaptureChannels & channel) != 0 &&
-                       m_CaptureDetail >= RequiredCaptureDetail(kind);
-            }
+            return (m_CaptureChannelBits & (int)channel) != 0 &&
+                   m_CaptureDetail >= RequiredCaptureDetail(kind);
         }
 
-        public void Publish(RuntimeTraceEvent traceEvent)
+        public bool Publish(in RuntimeTraceEvent traceEvent)
         {
             lock (m_Gate)
             {
                 if (m_Disposed || m_Terminated)
-                    return;
+                    return false;
 
                 bool live = (m_LiveChannels & traceEvent.Channel) != 0;
                 bool capture = m_Capture != null &&
                                (m_CaptureChannels & traceEvent.Channel) != 0 &&
                                m_CaptureDetail >= RequiredCaptureDetail(traceEvent.Kind);
                 if (!live && !capture)
-                    return;
-
+                    return false;
                 if (live)
-                    m_LiveState.Upsert(traceEvent);
+                    m_LiveState.Upsert(in traceEvent);
                 if (capture)
                     m_Capture.Publish(traceEvent);
+                return true;
             }
         }
 
@@ -968,9 +949,11 @@ namespace BTSMTL.Diagnostics
             {
                 if (m_Disposed || m_Terminated)
                     return;
-                m_Terminated = true;
                 m_Interests.Clear();
                 m_LiveChannels = RuntimeTraceChannel.None;
+                m_LiveChannelBits = 0;
+                m_CaptureChannelBits = 0;
+                m_Terminated = true;
             }
         }
 
@@ -991,6 +974,8 @@ namespace BTSMTL.Diagnostics
             {
                 if (m_Disposed)
                     return;
+                m_LiveChannelBits = 0;
+                m_CaptureChannelBits = 0;
                 m_Disposed = true;
                 m_Terminated = true;
                 m_Interests.Clear();
@@ -1067,6 +1052,7 @@ namespace BTSMTL.Diagnostics
                     m_LiveState.RemoveChannels(RuntimeTraceChannel.All & ~m_LiveChannels);
             }
             m_LiveChannels = channels;
+            m_LiveChannelBits = (int)channels;
         }
     }
 }

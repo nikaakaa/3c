@@ -25,7 +25,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly Guid m_CharacterRuntimeId;
         readonly HashSet<string> m_NodeIds;
         readonly HashSet<string> m_EdgeIds;
-        readonly List<RuntimeElementDebugState> m_States = new List<RuntimeElementDebugState>();
         readonly List<RuntimeDebugEventView> m_ObservationEvents = new List<RuntimeDebugEventView>();
         readonly List<RuntimeNodeExecutionObservation> m_ExecutionStates = new List<RuntimeNodeExecutionObservation>();
         readonly Dictionary<string, RuntimeNodeExecutionObservation> m_Nodes = new(StringComparer.Ordinal);
@@ -243,36 +242,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ClearConnectionPulses();
                 m_PulseInstance = Instance;
             }
-            view.CopyGraphExecutionStates(m_GraphId, Instance, m_ExecutionStates);
+            view.CopyCurrentEvents(m_GraphId, Instance,
+                RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine, m_ObservationEvents);
+            view.CopyGraphExecutionStates(m_ObservationEvents, m_ExecutionStates);
             for (int i = 0; i < m_ExecutionStates.Count; i++)
             {
                 RuntimeNodeExecutionObservation state = m_ExecutionStates[i];
                 if (m_NodeIds.Contains(state.Event.Source.ElementAuthoringId))
                     m_Nodes[state.Event.Source.ElementAuthoringId] = state;
             }
-            view.CopyGraphStates(m_GraphId, Instance, false, m_States);
-            for (int i = 0; i < m_States.Count; i++)
-            {
-                RuntimeElementDebugState state = m_States[i];
-                if (state.Source.Kind == RuntimeSourceElementKind.Edge && m_EdgeIds.Contains(state.Source.ElementAuthoringId))
-                    m_Edges[state.Source.ElementAuthoringId] = state;
-            }
-            view.CopyCurrentEvents(RuntimeTraceChannel.Graph | RuntimeTraceChannel.StateMachine, m_ObservationEvents);
             for (int i = 0; i < m_ObservationEvents.Count; i++)
             {
                 RuntimeDebugEventView item = m_ObservationEvents[i];
-                if (item.Event.Kind == RuntimeTraceEventKind.TraceSamplingLimited &&
-                    item.Event.RuntimeInstance.Equals(Instance))
+                if (item.Event.Kind == RuntimeTraceEventKind.TraceSamplingLimited)
                     m_SamplingLimited = true;
+                if (item.Source.Kind != RuntimeSourceElementKind.Edge ||
+                    !m_EdgeIds.Contains(item.Source.ElementAuthoringId))
+                    continue;
+                if (view.TryGetState(item.Source, Instance, out RuntimeElementDebugState state))
+                    m_Edges[item.Source.ElementAuthoringId] = state;
                 ulong latestPosition = item.Event.Domain == RuntimeTraceDomain.Presentation
                     ? view.LatestPresentationFrame : view.LatestLogicTick;
-                if (!item.Event.RuntimeInstance.Equals(Instance) ||
-                    !string.Equals(item.Source.GraphAuthoringId, m_GraphId, StringComparison.Ordinal) ||
-                    item.Source.Kind != RuntimeSourceElementKind.Edge ||
-                    item.Event.Kind is not (RuntimeTraceEventKind.EdgeSelected or RuntimeTraceEventKind.StateTransitionSelected) ||
+                if (item.Event.Kind is not (RuntimeTraceEventKind.EdgeSelected or RuntimeTraceEventKind.StateTransitionSelected) ||
                     item.Event.Position > latestPosition ||
-                    latestPosition - item.Event.Position > 1 ||
-                    !m_EdgeIds.Contains(item.Source.ElementAuthoringId))
+                    latestPosition - item.Event.Position > 1)
                     continue;
                 string edgeId = item.Source.ElementAuthoringId;
                 if (m_ConnectionPulses.TryGetValue(edgeId, out var pulse) && pulse.Sequence == item.Event.Sequence)
@@ -283,18 +276,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (m_CaptureValues)
             {
-                view.CopyCurrentEvents(RuntimeTraceChannel.Values, m_ObservationEvents);
+                view.CopyCurrentEvents(m_GraphId, Instance, RuntimeTraceChannel.Values, m_ObservationEvents);
                 for (int i = 0; i < m_ObservationEvents.Count; i++)
                 {
                     RuntimeDebugEventView sample = m_ObservationEvents[i];
-                    if (sample.Event.Kind is RuntimeTraceEventKind.ValueSamplingLimited or RuntimeTraceEventKind.TraceSamplingLimited &&
-                        sample.Event.RuntimeInstance.Equals(Instance))
+                    if (sample.Event.Kind is RuntimeTraceEventKind.ValueSamplingLimited or RuntimeTraceEventKind.TraceSamplingLimited)
                     {
                         m_SamplingLimited = true;
                         continue;
                     }
                     var key = (sample.Source.ElementAuthoringId, sample.Source.PortAuthoringId);
-                    if (sample.Event.RuntimeInstance.Equals(Instance) && sample.Source.GraphAuthoringId == m_GraphId && sample.Source.Kind == RuntimeSourceElementKind.Port &&
+                    if (sample.Source.Kind == RuntimeSourceElementKind.Port &&
                         sample.Event.Kind == RuntimeTraceEventKind.ValueSampled && m_ValuePortIds.Contains(key) &&
                         (!m_Values.TryGetValue(key, out RuntimeDebugEventView previous) || sample.Event.Sequence > previous.Event.Sequence))
                         m_Values[key] = sample;

@@ -194,7 +194,7 @@ namespace BTSMTL.Diagnostics
             payload.SourceClockId = m_SourceClockId;
             payload.SourceTickKind = m_SourceTickKind;
             ulong position = domain == RuntimeTraceDomain.Presentation ? m_PresentationFrame : m_LogicTick;
-            Store.Publish(new RuntimeTraceEvent(
+            RuntimeTraceEvent traceEvent = new RuntimeTraceEvent(
                 SessionId,
                 revision,
                 m_RuntimeEpoch,
@@ -206,14 +206,12 @@ namespace BTSMTL.Diagnostics
                 runtimeInstance.IsValid ? runtimeInstance : CurrentRuntimeInstance,
                 source,
                 kind,
-                payload));
-            return true;
+                payload);
+            return Store.Publish(in traceEvent);
         }
 
         public bool PublishTarget(RuntimeTraceEventKind kind, RuntimeTracePayload payload)
         {
-            if (!Store.ShouldPublish(RuntimeTraceChannel.Graph, kind))
-                return false;
             return Publish(
                 RuntimeTraceChannel.Graph,
                 RuntimeTraceDomain.Lifecycle,

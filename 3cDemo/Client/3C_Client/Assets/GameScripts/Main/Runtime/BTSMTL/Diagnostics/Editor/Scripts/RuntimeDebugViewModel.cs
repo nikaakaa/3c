@@ -111,43 +111,25 @@ namespace BTSMTL.Diagnostics.Editor
 
     public sealed class RuntimeDebugChangeSet
     {
-        readonly RuntimeSourceElementKey[] m_Sources;
-        readonly RuntimeInstanceKey[] m_Instances;
+        readonly HashSet<RuntimeSourceElementKey> m_Sources;
+        readonly HashSet<RuntimeInstanceKey> m_Instances;
 
-        internal RuntimeDebugChangeSet(long revision, bool fullSync, ICollection<RuntimeSourceElementKey> sources, ICollection<RuntimeInstanceKey> instances, long captureVersion = 0)
+        internal RuntimeDebugChangeSet(HashSet<RuntimeSourceElementKey> sources, HashSet<RuntimeInstanceKey> instances)
+        {
+            m_Sources = sources;
+            m_Instances = instances;
+        }
+
+        internal void Update(long revision, bool fullSync, long captureVersion)
         {
             Revision = revision;
             FullSync = fullSync;
             CaptureVersion = captureVersion;
-            if (sources == null || sources.Count == 0)
-            {
-                m_Sources = Array.Empty<RuntimeSourceElementKey>();
-            }
-            else
-            {
-                m_Sources = new RuntimeSourceElementKey[sources.Count];
-                int index = 0;
-                foreach (RuntimeSourceElementKey source in sources)
-                    m_Sources[index++] = source;
-            }
-
-            if (instances == null || instances.Count == 0)
-            {
-                m_Instances = Array.Empty<RuntimeInstanceKey>();
-            }
-            else
-            {
-                m_Instances = new RuntimeInstanceKey[instances.Count];
-                int index = 0;
-                foreach (RuntimeInstanceKey instance in instances)
-                    m_Instances[index++] = instance;
-            }
         }
 
-        public static RuntimeDebugChangeSet Empty { get; } = new RuntimeDebugChangeSet(0, false, null, null);
-        public long Revision { get; }
-        public bool FullSync { get; }
-        public long CaptureVersion { get; }
+        public long Revision { get; private set; }
+        public bool FullSync { get; private set; }
+        public long CaptureVersion { get; private set; }
         public IReadOnlyCollection<RuntimeSourceElementKey> Sources => m_Sources;
         public IReadOnlyCollection<RuntimeInstanceKey> Instances => m_Instances;
 
@@ -155,22 +137,15 @@ namespace BTSMTL.Diagnostics.Editor
         {
             if (FullSync)
                 return true;
-            for (int i = 0; i < m_Sources.Length; i++)
-                if (m_Sources[i].Kind == kind)
+            foreach (RuntimeSourceElementKey source in m_Sources)
+                if (source.Kind == kind)
                     return true;
             return false;
         }
 
         public bool AffectsSource(RuntimeSourceElementKey source)
         {
-            if (FullSync)
-                return true;
-            foreach (RuntimeSourceElementKey item in m_Sources)
-            {
-                if (item.Equals(source))
-                    return true;
-            }
-            return false;
+            return FullSync || m_Sources.Contains(source);
         }
 
         public bool AffectsGraph(string graphAuthoringId, RuntimeInstanceKey instance)
@@ -180,7 +155,7 @@ namespace BTSMTL.Diagnostics.Editor
             foreach (RuntimeSourceElementKey source in m_Sources)
             {
                 if (string.Equals(source.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal))
-                    return !instance.IsValid || ContainsInstance(instance);
+                    return !instance.IsValid || m_Instances.Contains(instance);
             }
             return false;
         }
@@ -192,17 +167,7 @@ namespace BTSMTL.Diagnostics.Editor
             foreach (RuntimeSourceElementKey source in m_Sources)
             {
                 if (string.Equals(source.TimelineAuthoringId, timelineAuthoringId, StringComparison.Ordinal))
-                    return !playback.IsValid || ContainsInstance(playback);
-            }
-            return false;
-        }
-
-        bool ContainsInstance(RuntimeInstanceKey instance)
-        {
-            foreach (RuntimeInstanceKey item in m_Instances)
-            {
-                if (item.Equals(instance))
-                    return true;
+                    return !playback.IsValid || m_Instances.Contains(playback);
             }
             return false;
         }
@@ -216,10 +181,8 @@ namespace BTSMTL.Diagnostics.Editor
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugSourceMapSnapshot> m_InstanceSourceMaps = new();
         readonly Dictionary<RuntimeInstanceKey, (ulong Parent, ulong Sequence)> m_InvocationParents = new();
         readonly Dictionary<ElementInstanceKey, RuntimeElementDebugState> m_ElementStates = new Dictionary<ElementInstanceKey, RuntimeElementDebugState>();
-        readonly Dictionary<RuntimeSourceElementKey, Dictionary<RuntimeInstanceKey, ulong>> m_Instances = new Dictionary<RuntimeSourceElementKey, Dictionary<RuntimeInstanceKey, ulong>>();
-        readonly Dictionary<string, HashSet<RuntimeInstanceKey>> m_GraphInstanceMembership = new Dictionary<string, HashSet<RuntimeInstanceKey>>(StringComparer.Ordinal);
+        readonly Dictionary<string, Dictionary<RuntimeInstanceKey, ulong>> m_GraphInstances = new(StringComparer.Ordinal);
         readonly Dictionary<string, long> m_GraphInstanceRevisions = new Dictionary<string, long>(StringComparer.Ordinal);
-        readonly Dictionary<RuntimeInstanceKey, ulong> m_GraphInstanceSequences = new Dictionary<RuntimeInstanceKey, ulong>();
         readonly InstanceSequenceOrder m_InstanceSequenceOrder;
         readonly TimelineInstanceSequenceOrder m_TimelineInstanceSequenceOrder;
         readonly Dictionary<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder> m_TimelinePlayback = new Dictionary<RuntimeInstanceKey, TimelinePlaybackSummaryBuilder>();
@@ -228,13 +191,12 @@ namespace BTSMTL.Diagnostics.Editor
         readonly Dictionary<TimelineSourceKey, long> m_TimelinePlaybackRevisions = new Dictionary<TimelineSourceKey, long>();
         readonly HashSet<RuntimeSourceElementKey> m_PendingSources = new HashSet<RuntimeSourceElementKey>();
         readonly HashSet<RuntimeInstanceKey> m_PendingInstances = new HashSet<RuntimeInstanceKey>();
-        RuntimeDebugChangeSet m_Changes = RuntimeDebugChangeSet.Empty;
+        readonly RuntimeDebugChangeSet m_Changes;
         RuntimeTraceChannel m_Channels;
         string m_Error = string.Empty;
         bool m_PendingFullSync;
         ulong m_LatestLogicTick;
         ulong m_LatestPresentationFrame;
-        long m_Revision;
         bool m_HasCoverageGap;
         long m_EvictedStates;
 
@@ -243,7 +205,8 @@ namespace BTSMTL.Diagnostics.Editor
             Target = target;
             m_SourceMap = sourceMap ?? RuntimeDebugSourceMapSnapshot.Empty;
             m_Channels = channels;
-            m_InstanceSequenceOrder = new InstanceSequenceOrder(this);
+            m_Changes = new RuntimeDebugChangeSet(m_PendingSources, m_PendingInstances);
+            m_InstanceSequenceOrder = new InstanceSequenceOrder();
             m_TimelineInstanceSequenceOrder = new TimelineInstanceSequenceOrder(this);
         }
 
@@ -255,7 +218,7 @@ namespace BTSMTL.Diagnostics.Editor
         public string Error => m_Error;
         public ulong LatestLogicTick => m_LatestLogicTick;
         public ulong LatestPresentationFrame => m_LatestPresentationFrame;
-        public long Revision => m_Revision;
+        public long Revision => m_Changes.Revision;
         public bool HasCoverageGap => m_HasCoverageGap;
         public long EvictedStates => m_EvictedStates;
 
@@ -312,21 +275,11 @@ namespace BTSMTL.Diagnostics.Editor
         public void CopyGraphInstances(string graphAuthoringId, List<RuntimeInstanceKey> destination)
         {
             destination.Clear();
-            m_GraphInstanceSequences.Clear();
-            foreach (KeyValuePair<RuntimeSourceElementKey, Dictionary<RuntimeInstanceKey, ulong>> source in m_Instances)
-            {
-                if (!string.Equals(source.Key.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal))
-                    continue;
-
-                foreach (KeyValuePair<RuntimeInstanceKey, ulong> instance in source.Value)
-                {
-                    if (!m_GraphInstanceSequences.TryGetValue(instance.Key, out ulong current) || instance.Value > current)
-                        m_GraphInstanceSequences[instance.Key] = instance.Value;
-                }
-            }
-
-            foreach (KeyValuePair<RuntimeInstanceKey, ulong> instance in m_GraphInstanceSequences)
+            if (!m_GraphInstances.TryGetValue(graphAuthoringId, out Dictionary<RuntimeInstanceKey, ulong> instances))
+                return;
+            foreach (KeyValuePair<RuntimeInstanceKey, ulong> instance in instances)
                 destination.Add(instance.Key);
+            m_InstanceSequenceOrder.Sequences = instances;
             destination.Sort(m_InstanceSequenceOrder);
         }
 
@@ -446,38 +399,31 @@ namespace BTSMTL.Diagnostics.Editor
                     destination.Add(eventView);
         }
 
-        public void CopyGraphStates(
+        public void CopyCurrentEvents(
             string graphAuthoringId,
             RuntimeInstanceKey instance,
-            bool changedOnly,
-            List<RuntimeElementDebugState> destination)
+            RuntimeTraceChannel channels,
+            List<RuntimeDebugEventView> destination)
         {
             destination.Clear();
-            foreach (KeyValuePair<ElementInstanceKey, RuntimeElementDebugState> pair in m_ElementStates)
-            {
-                if (!string.Equals(pair.Key.Source.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal) ||
-                    !pair.Key.Instance.Equals(instance))
-                    continue;
-                if (changedOnly && !m_Changes.AffectsSource(pair.Key.Source))
-                    continue;
-                destination.Add(pair.Value);
-            }
+            foreach (RuntimeDebugEventView eventView in m_CurrentEvents.Values)
+                if ((eventView.Event.Channel & channels) != 0 &&
+                    eventView.Event.RuntimeInstance.Equals(instance) &&
+                    (string.Equals(eventView.Source.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal) ||
+                     eventView.Event.Kind is RuntimeTraceEventKind.TraceSamplingLimited or RuntimeTraceEventKind.ValueSamplingLimited))
+                    destination.Add(eventView);
         }
 
         public void CopyGraphExecutionStates(
-            string graphAuthoringId,
-            RuntimeInstanceKey instance,
+            IReadOnlyList<RuntimeDebugEventView> events,
             List<RuntimeNodeExecutionObservation> destination)
         {
             destination.Clear();
             m_LatestGraphExecution.Clear();
-            if (!instance.IsValid)
-                return;
-            foreach (RuntimeDebugEventView item in m_CurrentEvents.Values)
+            for (int i = 0; i < events.Count; i++)
             {
+                RuntimeDebugEventView item = events[i];
                 if (item.Source.Kind != RuntimeSourceElementKind.Node ||
-                    !string.Equals(item.Source.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal) ||
-                    !item.Event.RuntimeInstance.Equals(instance) ||
                     !RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation))
                     continue;
                 if (!m_LatestGraphExecution.TryGetValue(item.Source, out RuntimeNodeExecutionObservation previous) ||
@@ -511,8 +457,7 @@ namespace BTSMTL.Diagnostics.Editor
             m_InstanceSourceMaps.Clear();
             m_InvocationParents.Clear();
             m_ElementStates.Clear();
-            m_Instances.Clear();
-            m_GraphInstanceMembership.Clear();
+            m_GraphInstances.Clear();
             m_GraphInstanceRevisions.Clear();
             m_TimelinePlayback.Clear();
             m_PlaybackEvents.Clear();
@@ -570,15 +515,7 @@ namespace BTSMTL.Diagnostics.Editor
                 if (!m_ElementStates.TryGetValue(elementKey, out RuntimeElementDebugState previousState) ||
                     traceEvent.Sequence > previousState.Sequence)
                     m_ElementStates[elementKey] = new RuntimeElementDebugState(eventView);
-                if (!m_Instances.TryGetValue(source, out Dictionary<RuntimeInstanceKey, ulong> instances))
-                {
-                    instances = new Dictionary<RuntimeInstanceKey, ulong>();
-                    m_Instances.Add(source, instances);
-                }
-                if (!instances.TryGetValue(traceEvent.RuntimeInstance, out ulong previousSequence) ||
-                    traceEvent.Sequence > previousSequence)
-                    instances[traceEvent.RuntimeInstance] = traceEvent.Sequence;
-                RegisterGraphInstance(source.GraphAuthoringId, traceEvent.RuntimeInstance);
+                RegisterGraphInstance(source.GraphAuthoringId, traceEvent.RuntimeInstance, traceEvent.Sequence);
             }
 
             ApplyTimeline(eventView, key);
@@ -586,8 +523,7 @@ namespace BTSMTL.Diagnostics.Editor
 
         internal void CommitUpdate(long captureVersion = 0)
         {
-            m_Revision++;
-            m_Changes = new RuntimeDebugChangeSet(m_Revision, m_PendingFullSync, m_PendingSources, m_PendingInstances, captureVersion);
+            m_Changes.Update(m_Changes.Revision + 1, m_PendingFullSync, captureVersion);
             m_PendingFullSync = false;
         }
 
@@ -642,27 +578,29 @@ namespace BTSMTL.Diagnostics.Editor
                 : 0;
         }
 
-        void RegisterGraphInstance(string graphAuthoringId, RuntimeInstanceKey instance)
+        void RegisterGraphInstance(string graphAuthoringId, RuntimeInstanceKey instance, ulong sequence)
         {
-            if (string.IsNullOrEmpty(graphAuthoringId))
-                return;
-            if (!m_GraphInstanceMembership.TryGetValue(graphAuthoringId, out HashSet<RuntimeInstanceKey> instances))
+            if (!m_GraphInstances.TryGetValue(graphAuthoringId, out Dictionary<RuntimeInstanceKey, ulong> instances))
             {
-                instances = new HashSet<RuntimeInstanceKey>();
-                m_GraphInstanceMembership.Add(graphAuthoringId, instances);
+                instances = new Dictionary<RuntimeInstanceKey, ulong>();
+                m_GraphInstances.Add(graphAuthoringId, instances);
             }
-            if (instances.Add(instance))
-                m_GraphInstanceRevisions[graphAuthoringId] = GetGraphInstanceRevision(graphAuthoringId) + 1;
+            if (!instances.TryGetValue(instance, out ulong previousSequence))
+            {
+                instances.Add(instance, sequence);
+                if (!string.IsNullOrEmpty(graphAuthoringId))
+                    m_GraphInstanceRevisions[graphAuthoringId] = GetGraphInstanceRevision(graphAuthoringId) + 1;
+            }
+            else if (sequence > previousSequence)
+                instances[instance] = sequence;
         }
 
         sealed class InstanceSequenceOrder : IComparer<RuntimeInstanceKey>
         {
-            readonly RuntimeDebugViewModel m_Owner;
-
-            internal InstanceSequenceOrder(RuntimeDebugViewModel owner) => m_Owner = owner;
+            internal Dictionary<RuntimeInstanceKey, ulong> Sequences { get; set; }
 
             public int Compare(RuntimeInstanceKey left, RuntimeInstanceKey right) =>
-                m_Owner.m_GraphInstanceSequences[right].CompareTo(m_Owner.m_GraphInstanceSequences[left]);
+                Sequences[right].CompareTo(Sequences[left]);
         }
 
         sealed class TimelineInstanceSequenceOrder : IComparer<RuntimeInstanceKey>

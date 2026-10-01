@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline;
@@ -14,6 +13,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     static class RuntimeDebugSourceNavigator
     {
+        static readonly BtsmtlSkillGraphClosureIndex s_Sources = new();
+        static readonly List<RuntimeInstanceKey> s_Instances = new();
+        static BtsmtlSkillGraphFingerprint s_Fingerprint;
+        static CharacterPipelineDefinition s_Definition;
+        static Guid s_SessionId;
+        static RuntimeContentRevision s_Revision;
+
+        static RuntimeDebugSourceNavigator()
+        {
+            EditorApplication.projectChanged += InvalidateSources;
+            Undo.undoRedoPerformed += InvalidateSources;
+            ObjectChangeEvents.changesPublished += OnObjectChanges;
+        }
+
+        static void InvalidateSources() => s_Definition = null;
+
+        static void OnObjectChanges(ref ObjectChangeEventStream changes)
+        {
+            for (int i = 0; i < changes.length; i++)
+            {
+                if (changes.GetEventType(i) != ObjectChangeKind.ChangeAssetObjectProperties)
+                    continue;
+                InvalidateSources();
+                return;
+            }
+        }
+
+        static BtsmtlSkillGraphClosureIndex GetSources(CharacterPipelineDefinition definition)
+        {
+            RuntimeDebugTargetInfo target = RuntimeDebugSession.Shared.ViewModel.Target;
+            if (!ReferenceEquals(s_Definition, definition) || s_SessionId != target.SessionId ||
+                !s_Revision.Equals(target.Revision))
+            {
+                s_Sources.Build(definition);
+                s_Fingerprint = new BtsmtlSkillGraphFingerprint();
+                s_Definition = definition;
+                s_SessionId = target.SessionId;
+                s_Revision = target.Revision;
+            }
+            return s_Sources;
+        }
+
+        internal static FlowGraph ResolveGraph(CharacterPipelineDefinition definition, string graphAuthoringId) =>
+            GetSources(definition).Graphs[graphAuthoringId];
+
+        internal static RuntimeDebugTargetRequest CreateTargetRequest(CharacterPipelineDefinition definition, FlowGraph graph)
+        {
+            GetSources(definition);
+            return new RuntimeDebugTargetRequest(
+                RuntimeSourceElementKey.Graph(((IBtsmtlSkillFlowGraph)graph).AuthoringId),
+                s_Fingerprint.Compute(graph));
+        }
+
         public static bool Open(RuntimeDebugEventView eventView, bool pin = false, bool preserveFocus = false)
         {
             EditorWindow previousFocus = preserveFocus ? EditorWindow.focusedWindow : null;
@@ -78,20 +130,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!definition || !source.IsValid)
                 return false;
 
-            if (!string.IsNullOrEmpty(source.GraphAuthoringId))
-            {
-                IReadOnlyList<BtsmtlSkillFlowGraph> roots = definition.AbilityGraphs;
-                FlowGraph[] nativeGraphs = roots
-                    .Where(graph => graph != null)
-                    .SelectMany(graph => BtsmtlSkillGraphClosure.Validate(graph, false))
-                    .Distinct()
-                    .Where(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == source.GraphAuthoringId)
-                    .ToArray();
-                if (nativeGraphs.Length != 0)
-                    return nativeGraphs.Length == 1 && OpenSkillGraph(
-                        definition, nativeGraphs[0], source, instance, playback, expectedTimelineId, pin);
-            }
-            return false;
+            return !string.IsNullOrEmpty(source.GraphAuthoringId) &&
+                   GetSources(definition).Graphs.TryGetValue(source.GraphAuthoringId, out FlowGraph graph) &&
+                   OpenSkillGraph(definition, graph, source, instance, playback, expectedTimelineId, pin);
         }
 
         static bool OpenTimelineSource(
@@ -111,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RuntimeDebugSession.Shared.ViewModel,
                     instance,
                     provenance,
-                    new List<RuntimeInstanceKey>(),
+                    s_Instances,
                     out RuntimeInstanceKey graphInstance))
                 return false;
             return Open(
@@ -158,20 +199,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             NodeCanvas.Framework.IGraphElement element = null;
             if (source.Kind is RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port)
-                element = graph.allNodes.SingleOrDefault(node => node.UID == source.ElementAuthoringId);
+                GetSources(definition).Elements.TryGetValue(
+                    RuntimeSourceElementKey.Node(source.GraphAuthoringId, source.ElementAuthoringId), out element);
             else if (source.Kind == RuntimeSourceElementKind.Edge)
-                element = graph.allNodes.SelectMany(node => node.outConnections)
-                    .SingleOrDefault(edge => edge.UID == source.ElementAuthoringId);
+                GetSources(definition).Elements.TryGetValue(source, out element);
             else if (source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
             {
-                BtsmtlSkillTimelineFlowNode[] timelines = graph.allNodes
-                    .OfType<BtsmtlSkillTimelineFlowNode>()
-                    .Where(node => node.Timeline != null &&
-                                   string.Equals(node.Timeline.AuthoringId, source.TimelineAuthoringId, StringComparison.Ordinal))
-                    .ToArray();
-                if (timelines.Length != 1)
+                int matches = 0;
+                for (int i = 0; i < graph.allNodes.Count; i++)
+                {
+                    if (graph.allNodes[i] is not BtsmtlSkillTimelineFlowNode timeline || timeline.Timeline == null ||
+                        !string.Equals(timeline.Timeline.AuthoringId, source.TimelineAuthoringId, StringComparison.Ordinal))
+                        continue;
+                    element = timeline;
+                    matches++;
+                }
+                if (matches != 1)
                     return false;
-                element = timelines[0];
             }
             else if (source.Kind is not RuntimeSourceElementKind.Graph and not RuntimeSourceElementKind.BlackboardDeclaration)
                 return false;

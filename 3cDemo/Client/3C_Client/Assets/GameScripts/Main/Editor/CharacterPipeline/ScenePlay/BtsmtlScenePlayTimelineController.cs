@@ -347,7 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void OnRuntimeDebugChanged()
             {
-                if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled)
+                if (!TimelineWorkspaceModeBridge.RuntimeDebugEnabled || !m_FollowRuntime)
                     return;
                 m_RuntimeFocus.Refresh(RuntimeDebugSession.Shared.ViewModel);
                 QueueRuntimeNavigation();

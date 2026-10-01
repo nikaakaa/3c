@@ -4,6 +4,8 @@
 
 当前 Goal 已按用户要求启动：继续动画混合、Landing/Releasing 弯直突变和台阶跳脚，使用已有采样还原正式函数，由已有配套窗口维护多个完整业务测试与各自 HTML；本轮不启动 Replay。
 
+P1 接触期剩余腿长限制已写成独立源码候选，基线为 `fbed4b192`，见[候选补丁](../diagnostics/foot-placement/p1-contact-reach-candidate-20261001.patch)与[源码身份及接入状态](../diagnostics/foot-placement/p1-contact-reach-candidate-20261001.json)。候选由 Module 将本次实际加权骨盆位移交给 Completion，仅在正权重 Landing/Locked/Releasing 缩减有效踝修正的水平、向下分量，再按同一旋转与位置权重换回脚底修正、重查输出脚掌、防穿及写回既有历史。Completion 同步更新查询观察的标量与复用探针页，未扩充状态字段。补丁应用检查已通过，尚未编译或执行，正式 Assets 未改；测试窗口继续维护原 2023 种子及 2024～2056 的双脚完整业务，必须单列接触期新增悬脚，不能把文档的几何估算 8→0 写成实测收益。测试调用方签名仍待配套窗口迁移，不能直接将补丁当作已交付运行修复。
+
 采样时间边界候选 `441f4140f` 已完成同一 33 帧的直接来源修正版 A/B，结论为 `rejected-quality-regression`。2033 解锁时机改正且右脚峰值降低，但更早两帧的目标超长恶化，超长帧数未减少，最大额外修正单步也增加。两生产文件已恢复到 `fbed4b192`；连续曲线、作者权重、残差、冻结及骨盆均未作为此候选变量。候选源码、实际构建输入和执行程序集已封存，后续报告不得从撤回后的工作区覆盖它们。具体数字与限制见[完整边界候选对照](../diagnostics/foot-placement/ik-tests/releasing-boundary-result.json)和[原因说明](../diagnostics/foot-placement/ik-stair-continuity-explainer-20260930.html#release-cause-audit)。这一失败不能被写成起步粘脚、混合、边缘跳脚或伸直已经修复。
 
 最新完整释放窗口已扩至 2024～2056（33 帧），使用 2023 真实种子。实际 ACL、Native Slot、Action Slot、预测、场景查询、双脚生命周期及骨盆连续计算通过；历史 Goal 脚位和旋转误差均为 0，原踝还原最大误差约 0.001 mm，两版 203 根骨局部位置、旋转和缩放一致，各计算段预热后为 0 B。来源修正将右脚目标超长从 10 帧减为 8 帧，相对原动画的最大修正向量单步从 43.4414 cm 减为 30.1888 cm；最大目标伸展比仍为 117.9642%，2031～2037 的连续拉直仍在，不能继续用后半段 12 帧的 5→3 代替完整窗口。左右脚各 33 帧最终脚掌目标查询均有证据，无新增正穿透；这不等于最终鞋网格验证。完整数据与失败校准见[同一业务报告](../diagnostics/foot-placement/ik-tests/releasing-business-summary.json)和[可播放说明](../diagnostics/foot-placement/ik-tests/releasing-action-native.html)。

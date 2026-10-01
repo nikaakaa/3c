@@ -1,0 +1,29 @@
+{
+  "status": "candidate-not-executed",
+  "baselineCommit": "fbed4b1923b90d7126a50bab512b3a5e9b2a824b",
+  "scenario": "2023种子与2024至2056完整双脚释放业务",
+  "algorithm": "P1仅在骨盆后的Completion限制Landing/Locked/Releasing额外伸展，重新查询准备输出脚掌并回写原历史",
+  "effectiveAnkleCorrectionPolicy": "将有效踝修正的水平及向下分量同乘s，保留向上分量；通过有效踝差除正式位置权重转换回脚底修正",
+  "saturation": "d0=dAnim+0.25*max(0,L-dAnim); range=0.25*max(0,L-dAnim); dLimit=d0+range*(1-exp(-(dRequested-d0)/range))，range为0时dLimit=dAnim",
+  "formalWorkspaceModified": false,
+  "files": {
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootLifecycle.cs": {
+      "baselineSha256": "d5ba83fbac44a33c0c30e83b586dcead6e7b6b138ed75541a8ec9a046bc7063c",
+      "candidateSha256": "433894c4a71b3f9e8cccf356c5531dc4b64ef40eda6f062662c4e9cae0ac5292"
+    },
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootPlacementModule.cs": {
+      "baselineSha256": "72f405add4a5ea93b260ab62c547c3ea5dd2ef46cf9e3d21774bdcf03f69d41e",
+      "candidateSha256": "8ca38bf20a6e814a86e29a9bd87675b5ff455e30912f3399dd20b10ca4f49036"
+    }
+  },
+  "patchSha256": "fcd9742dc8e6695ce560b3597830a398be95167fb86e1a08be478125086c6091",
+  "archiveSha256": "3060209b316a61f5656bb7e0053bdcb4dba5d5de3d58492a5f5acd8b596729c8",
+  "staticCheck": "git apply --check passed; no compilation or execution performed by source thread",
+  "testThreadId": "01a0f283-f827-77f2-8258-a5ad56062573",
+  "pendingConsumerMigration": [
+    "Tools/FootPlacement.StoredPoseVerify/CapturedStoredFootGoalTests.cs:436,537,538",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Analysis/FootPlacement/CharacterFootCapturedReleaseTests.cs:331",
+    "3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Analysis/FootPlacement/CharacterFootCapturedContactTests.cs:268"
+  ],
+  "integrationStatus": "未接入正式Assets；测试窗口维护测试调用方，本补丁不能在调用方迁移与编译前直接作为已交付运行修复"
+}

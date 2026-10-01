@@ -208,7 +208,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Control.ClearConfirmedAction(actionInstanceId);
         }
 
-        public void SetActionTags(ulong actionInstanceId, IEnumerable<string> tags)
+        public void SetActionTags(ulong actionInstanceId, IReadOnlyList<string> tags)
         {
             EnsureWorkingState();
             m_State.SetTagSource(GameplayTagSourceIdentity.ActionInstance(actionInstanceId), tags);
@@ -220,7 +220,7 @@ namespace ThirdPersonSimulation.Fixed
             m_State.RemoveTagSource(GameplayTagSourceIdentity.ActionInstance(actionInstanceId));
         }
 
-        public void SetEquipmentTags(string sourceId, IEnumerable<string> tags)
+        public void SetEquipmentTags(string sourceId, IReadOnlyList<string> tags)
         {
             EnsureWorkingState();
             m_State.SetTagSource(SimulationIdentity.Require(sourceId, nameof(sourceId)), tags);
@@ -496,8 +496,11 @@ namespace ThirdPersonSimulation.Fixed
             m_Causes.Clear();
             if (m_State != null)
             {
-                foreach (PortableActiveEffectState active in m_State.ActiveEffects)
+                for (int i = 0; i < m_State.ActiveEffects.Count; i++)
+                {
+                    PortableActiveEffectState active = m_State.ActiveEffects[i];
                     m_Causes.Add(active.Handle, new PortableEffectCause(active.Spec.Definition, active.InstanceId, active.Spec.Context));
+                }
                 return;
             }
             m_CommittedState.CollectActiveEffectIdentities(m_Scratch.ActiveIdentities);

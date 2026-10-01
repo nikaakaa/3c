@@ -650,7 +650,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedGameplayEffectRuntimeCatalog
     {
         readonly Dictionary<string, string> m_TagParents = new Dictionary<string, string>(StringComparer.Ordinal);
-        readonly HashSet<string> m_InitialTags = new HashSet<string>(StringComparer.Ordinal);
+        readonly List<string> m_InitialTags = new List<string>();
         readonly Dictionary<string, PortableAttributeDefinition> m_Attributes = new Dictionary<string, PortableAttributeDefinition>(StringComparer.Ordinal);
         readonly Dictionary<string, PortableEffectDefinition> m_Effects = new Dictionary<string, PortableEffectDefinition>(StringComparer.Ordinal);
 
@@ -663,7 +663,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public IReadOnlyDictionary<string, string> TagParents => m_TagParents;
-        public IReadOnlyCollection<string> InitialTags => m_InitialTags;
+        public IReadOnlyList<string> InitialTags => m_InitialTags;
         public IReadOnlyDictionary<string, PortableAttributeDefinition> Attributes => m_Attributes;
         public IReadOnlyDictionary<string, PortableEffectDefinition> Effects => m_Effects;
 

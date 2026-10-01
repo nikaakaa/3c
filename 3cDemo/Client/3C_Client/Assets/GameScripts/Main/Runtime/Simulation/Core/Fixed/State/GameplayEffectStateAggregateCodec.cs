@@ -43,12 +43,12 @@ namespace ThirdPersonSimulation.Fixed
             if (scratch == null)
                 throw new ArgumentNullException(nameof(scratch));
 
-            var tagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
-            var attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
+            var tagSources = new SortedList<string, string[]>(StringComparer.Ordinal);
+            var attributes = new SortedList<string, PortableAttributeState>(StringComparer.Ordinal);
             var activeEffects = new List<PortableActiveEffectState>();
-            var periods = new SortedDictionary<ulong, ulong>();
-            var journal = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
-            var lifecycleRevisions = new SortedDictionary<ulong, ulong>();
+            var periods = new SortedList<ulong, ulong>();
+            var journal = new SortedList<ulong, List<PortablePredictionRecord>>();
+            var lifecycleRevisions = new SortedList<ulong, ulong>();
 
             ReadTags(reader.ReadBytesSegment(), tagSources);
             ReadAttributes(reader.ReadBytesSegment(), catalog, attributes);
@@ -143,7 +143,7 @@ namespace ThirdPersonSimulation.Fixed
                 int modifierCount = ReadCount(reader, "Gameplay Attribute modifier");
                 for (int modifierIndex = 0; modifierIndex < modifierCount; modifierIndex++)
                     attribute.Modifiers.Add(ReadModifier(reader));
-                attribute.Modifiers.Sort(CompareModifier);
+                attribute.Modifiers.Sort(PortableAttributeModifierComparer.Instance);
                 attributes.Add(id, attribute);
             }
             reader.RequireComplete();
@@ -172,7 +172,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < count; i++)
                 activeEffects.Add(ReadActive(reader, catalog));
             reader.RequireComplete();
-            activeEffects.Sort(CompareActive);
+            activeEffects.Sort(PortableActiveEffectComparer.Instance);
         }
 
         static void WritePeriods(CanonicalWriter writer, ReadOnlySpan<KeyValuePair<ulong, ulong>> periods)
@@ -553,17 +553,6 @@ namespace ThirdPersonSimulation.Fixed
             return count;
         }
 
-        static int CompareModifier(PortableAttributeModifierState left, PortableAttributeModifierState right)
-        {
-            int byInsertion = left.InsertionSequence.CompareTo(right.InsertionSequence);
-            return byInsertion != 0 ? byInsertion : left.Handle.CompareTo(right.Handle);
-        }
-
-        static int CompareActive(PortableActiveEffectState left, PortableActiveEffectState right)
-        {
-            int byInsertion = left.InsertionSequence.CompareTo(right.InsertionSequence);
-            return byInsertion != 0 ? byInsertion : left.Handle.CompareTo(right.Handle);
-        }
     }
 }
 

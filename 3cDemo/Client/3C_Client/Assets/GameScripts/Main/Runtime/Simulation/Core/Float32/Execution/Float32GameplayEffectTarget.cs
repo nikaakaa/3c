@@ -207,7 +207,7 @@ namespace ThirdPersonSimulation
             m_Control.ClearConfirmedAction(actionInstanceId);
         }
 
-        public void SetActionTags(ulong actionInstanceId, IEnumerable<string> tags)
+        public void SetActionTags(ulong actionInstanceId, IReadOnlyList<string> tags)
         {
             EnsureWorkingState();
             m_State.SetTagSource(GameplayTagSourceIdentity.ActionInstance(actionInstanceId), tags);
@@ -219,7 +219,7 @@ namespace ThirdPersonSimulation
             m_State.RemoveTagSource(GameplayTagSourceIdentity.ActionInstance(actionInstanceId));
         }
 
-        public void SetEquipmentTags(string sourceId, IEnumerable<string> tags)
+        public void SetEquipmentTags(string sourceId, IReadOnlyList<string> tags)
         {
             EnsureWorkingState();
             m_State.SetTagSource(SimulationIdentity.Require(sourceId, nameof(sourceId)), tags);

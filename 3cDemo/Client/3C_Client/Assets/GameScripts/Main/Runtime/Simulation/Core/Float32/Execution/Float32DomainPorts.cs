@@ -74,7 +74,7 @@ namespace ThirdPersonSimulation
 
     internal interface IFloat32GameplayTagQuery
     {
-        IEnumerable<string> OwnedTags { get; }
+        IReadOnlyList<string> OwnedTags { get; }
         bool HasTag(string tag);
         bool Matches(PortableTagQuery query);
         AbilityStateValue ReadAttribute(SimulationOperation operation, string outputPort);
@@ -82,7 +82,7 @@ namespace ThirdPersonSimulation
 
     internal interface IFloat32GameplayEffectActionPort
     {
-        void SetActionTags(ulong actionInstanceId, IEnumerable<string> tags);
+        void SetActionTags(ulong actionInstanceId, IReadOnlyList<string> tags);
         void RemoveActionTags(ulong actionInstanceId);
         void ClearConfirmedAction(ulong actionInstanceId);
     }

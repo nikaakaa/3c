@@ -254,7 +254,7 @@ namespace ThirdPersonSimulation
             ulong instanceId,
             ulong predictionKey);
         void WriteAction(TActionState action);
-        void SetActionTags(ulong actionInstanceId, IEnumerable<string> tags);
+        void SetActionTags(ulong actionInstanceId, IReadOnlyList<string> tags);
         void ClearRequest(ActionSkillActivationRequest<TTargetSnapshot> request);
         void EmitActionFact(SimulationExecutionSource source, TActionState action);
     }

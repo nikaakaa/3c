@@ -171,7 +171,7 @@ namespace ThirdPersonSimulation
 
     internal interface IActionAdmissionReadPort
     {
-        IEnumerable<string> OwnedGameplayTags { get; }
+        IReadOnlyList<string> OwnedGameplayTags { get; }
         int ActionCount { get; }
         bool TryReadActiveAction(int index, out ActionAdmissionActiveAction action);
         ActionAdmissionProfile RequireAdmissionProfile(CharacterSkillId skillId, string actionId);
@@ -341,7 +341,6 @@ namespace ThirdPersonSimulation
         readonly IActionAdmissionReadPort m_Port;
         readonly HashSet<string> m_OwnedTags = new HashSet<string>(StringComparer.Ordinal);
         readonly HashSet<string> m_ActiveSourceTags = new HashSet<string>(StringComparer.Ordinal);
-        readonly Dictionary<string, string[]> m_TagAncestors = new Dictionary<string, string[]>(StringComparer.Ordinal);
 
         public ActionAdmissionControl(IActionAdmissionReadPort port)
         {
@@ -354,8 +353,7 @@ namespace ThirdPersonSimulation
             m_ActiveSourceTags.Clear();
             try
             {
-                foreach (string tag in m_Port.OwnedGameplayTags)
-                    AddTag(m_OwnedTags, tag);
+                AddTags(m_OwnedTags, m_Port.OwnedGameplayTags);
 
                 if (!request.TargetProfile.Required.IsEmpty && !MatchesQuery(request.TargetProfile.Required, m_OwnedTags))
                     return Reject(ActionAdmissionRejectReason.RequiredTagsMissing, string.Empty, 0);
@@ -459,29 +457,18 @@ namespace ThirdPersonSimulation
         {
             if (!string.IsNullOrWhiteSpace(tag))
             {
-                if (!m_TagAncestors.TryGetValue(tag, out string[] ancestors))
-                {
-                    var chain = new List<string>();
-                    string current = tag;
-                    for (int depth = 0; depth < 64 && !string.IsNullOrEmpty(current); depth++)
-                    {
-                        chain.Add(current);
-                        if (!m_Port.TryGetGameplayTagParent(current, out string parent))
-                            break;
-                        if (string.Equals(parent, current, StringComparison.Ordinal))
-                            throw new InvalidOperationException($"Gameplay tag '{current}' is its own parent.");
-                        current = parent;
-                    }
-                    ancestors = chain.ToArray();
-                    m_TagAncestors.Add(tag, ancestors);
-                }
                 if (!destination.Add(tag))
                     return;
-                for (int i = 0; i < ancestors.Length; i++)
+                string current = tag;
+                for (int depth = 0; depth < 64 && !string.IsNullOrEmpty(current); depth++)
                 {
-                    if (string.Equals(ancestors[i], tag, StringComparison.Ordinal))
-                        continue;
-                    destination.Add(ancestors[i]);
+                    if (!string.Equals(current, tag, StringComparison.Ordinal))
+                        destination.Add(current);
+                    if (!m_Port.TryGetGameplayTagParent(current, out string parent))
+                        break;
+                    if (string.Equals(parent, current, StringComparison.Ordinal))
+                        throw new InvalidOperationException($"Gameplay tag '{current}' is its own parent.");
+                    current = parent;
                 }
             }
         }

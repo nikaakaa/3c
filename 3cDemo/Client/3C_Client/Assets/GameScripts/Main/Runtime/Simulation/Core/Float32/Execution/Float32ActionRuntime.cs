@@ -274,7 +274,7 @@ namespace ThirdPersonSimulation
 			return FindCatalog(ProgramCatalogEntryKind.GameplayTag, identity);
 		}
 
-		IEnumerable<string> IActionAdmissionReadPort.OwnedGameplayTags =>
+		IReadOnlyList<string> IActionAdmissionReadPort.OwnedGameplayTags =>
             m_GameplayTags == null ? Array.Empty<string>() : m_GameplayTags.OwnedTags;
 
 		int IActionAdmissionReadPort.ActionCount => m_Actions.ActionInstances.Count;
@@ -472,12 +472,13 @@ namespace ThirdPersonSimulation
 
         void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.SetActionTags(
             ulong actionInstanceId,
-            IEnumerable<string> tags)
+            IReadOnlyList<string> tags)
         {
             if (m_GameplayEffectActions == null)
             {
-                foreach (string tag in tags ?? Array.Empty<string>())
-                    if (!string.IsNullOrEmpty(tag))
+                int tagCount = tags?.Count ?? 0;
+                for (int i = 0; i < tagCount; i++)
+                    if (!string.IsNullOrEmpty(tags[i]))
                         throw new InvalidOperationException(
                             "Action tags require the declared Gameplay Effect service.");
                 return;

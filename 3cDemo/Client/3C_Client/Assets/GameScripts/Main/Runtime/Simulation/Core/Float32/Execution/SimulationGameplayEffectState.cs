@@ -1077,7 +1077,7 @@ namespace ThirdPersonSimulation
             return m_Catalog.Matches(query, OwnedTagsSnapshot);
         }
 
-        public void SetTagSource(string sourceId, IEnumerable<string> tags)
+        public void SetTagSource(string sourceId, IReadOnlyList<string> tags)
         {
             string source = SimulationIdentity.Require(sourceId, nameof(sourceId));
             m_TagSources.TryGetValue(source, out string[] current);
@@ -1646,7 +1646,7 @@ namespace ThirdPersonSimulation
             }
         }
 
-        string[] CanonicalTags(IEnumerable<string> tags, string[] current = null)
+        string[] CanonicalTags(IReadOnlyList<string> tags, string[] current = null)
         {
             List<string> values = m_Scratch.CanonicalTags;
             values.Clear();
@@ -1654,8 +1654,8 @@ namespace ThirdPersonSimulation
             {
                 if (tags != null)
                 {
-                    foreach (string tag in tags)
-                        values.Add(Float32GameplayEffectRuntimeCatalog.NormalizeTag(tag));
+                    for (int i = 0; i < tags.Count; i++)
+                        values.Add(Float32GameplayEffectRuntimeCatalog.NormalizeTag(tags[i]));
                 }
                 values.Sort(StringComparer.Ordinal);
                 for (int i = values.Count - 1; i > 0; i--)

@@ -69,14 +69,14 @@ namespace ThirdPersonSimulation.Fixed
             m_ActiveTick = default;
         }
 
-        public IEnumerable<string> OwnedTags => m_GameplayEffects.OwnedTags;
+        public IReadOnlyList<string> OwnedTags => m_GameplayEffects.OwnedTags;
         public bool HasTag(string tag) => m_GameplayEffects.HasTag(tag);
         public bool Matches(PortableTagQuery query) => m_GameplayEffects.Matches(query);
-        public void SetActionTags(ulong actionInstanceId, IEnumerable<string> tags) => m_GameplayEffects.SetActionTags(actionInstanceId, tags);
+        public void SetActionTags(ulong actionInstanceId, IReadOnlyList<string> tags) => m_GameplayEffects.SetActionTags(actionInstanceId, tags);
         public void RemoveActionTags(ulong actionInstanceId) => m_GameplayEffects.RemoveActionTags(actionInstanceId);
         public void ClearConfirmedAction(ulong actionInstanceId) => m_GameplayEffects.ClearConfirmedAction(actionInstanceId);
 
-        public void SetEquipmentTags(string sourceId, IEnumerable<string> tags) =>
+        public void SetEquipmentTags(string sourceId, IReadOnlyList<string> tags) =>
             m_GameplayEffects.SetEquipmentTags(sourceId, tags);
 
         public void RemoveEquipmentTags(string sourceId) =>

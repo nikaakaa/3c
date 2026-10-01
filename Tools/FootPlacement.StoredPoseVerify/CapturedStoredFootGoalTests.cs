@@ -4,7 +4,7 @@
 链路：正式 Stored/贡献选择输出 → LandingRuntime → Lifecycle → 实际脚底查询 → Complete → Goal。
 边界：预测/地面路径和骨盆可达性是录制的边界输入，未重跑 PredictFootPair、Native Slot 或完整 FBBIK。
 说明：docs/diagnostics/foot-placement/ik-tests/stored-foot-motion.html。此入口是 Unity 内函数实验，不能冒充正式 runner。
-P1_FIXTURE使用同一2023种子和2024～2056双脚业务，实际重算预测、路径及骨盆；P1_CANDIDATE把当帧加权骨盆偏移交给Complete。
+P1_FIXTURE使用同一2023种子和2024～2056双脚业务，实际重算预测、路径及骨盆；Complete 统一接收当帧骨盆处理后的髋位置。
 最终Goal实际查询保存heel/toe与整脚净空，完整记录后断言；说明与阻塞状态见releasing-action-native.html。
 */
 using System;
@@ -467,7 +467,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 root.SetPositionAndRotation(input.RootPosition, input.RootRotation);
                 EvaluateCapturedFoot(ref context, input, candidate, root, in query, revision,
                     targetProbes, outputProbes, out var receipt, out _, out _);
-                CharacterResolvedFootResult output = receipt.Complete(ref context, input.RecordedLandingReach, out var motion);
+                CharacterResolvedFootResult output = receipt.Complete(ref context, input.RecordedLandingReach, input.Animated.HipPosition, out var motion);
                 results[i] = QueryCapturedGoal(input, in output, in motion, in context, root, in query, revision);
             }
         }
@@ -599,14 +599,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     leftRequest.GoalTarget.EffectiveSole, rightRequest.GoalTarget.EffectiveSole, l.LegLength, r.LegLength, r.Weight, r.Delta);
                 var input = CharacterFootStrideHipsBuilder.PreparePelvis(in intent, in requests, in support, in frame);
                 var pelvis = CharacterFootStrideHipsBuilder.ResolvePelvis(in input, in r.Settings, ref spring);
-#if P1_CANDIDATE
                 Vector3 weightedPelvisDelta = pelvis.PelvisDelta * pelvis.PositionWeight;
-                var leftOutput = leftCompletion.Complete(ref left, pelvis.LeftLandingReachAvailable, weightedPelvisDelta, out var leftMotion);
-                var rightOutput = rightCompletion.Complete(ref right, pelvis.RightLandingReachAvailable, weightedPelvisDelta, out var rightMotion);
-#else
-                var leftOutput = leftCompletion.Complete(ref left, pelvis.LeftLandingReachAvailable, out var leftMotion);
-                var rightOutput = rightCompletion.Complete(ref right, pelvis.RightLandingReachAvailable, out var rightMotion);
-#endif
+                var leftOutput = leftCompletion.Complete(ref left, pelvis.LeftLandingReachAvailable, l.Animated.HipPosition + weightedPelvisDelta, out var leftMotion);
+                var rightOutput = rightCompletion.Complete(ref right, pelvis.RightLandingReachAvailable, r.Animated.HipPosition + weightedPelvisDelta, out var rightMotion);
                 pelvisGoals[i] = CapturedFootModuleFunctions.CreatePelvisGoal(in pelvis, root);
                 if (!pelvis.ProducesPelvisGoal) spring.Clear();
                 leftResults[i] = QueryCapturedGoal(l, in leftOutput, in leftMotion, in left, root, in query, revision);

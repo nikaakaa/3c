@@ -658,10 +658,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterResolvedFootResult leftResolved = leftCompletion.Complete(
                 ref bank.LeftFoot,
                 leftReachAvailable,
+                leftPose.HipPosition + strideHips.PelvisDelta * strideHips.PositionWeight,
                 out CharacterFootSwingMotionResult leftFootMotion);
             CharacterResolvedFootResult rightResolved = rightCompletion.Complete(
                 ref bank.RightFoot,
                 rightReachAvailable,
+                rightPose.HipPosition + strideHips.PelvisDelta * strideHips.PositionWeight,
                 out CharacterFootSwingMotionResult rightFootMotion);
             var resolvedPair = new CharacterResolvedFootPair(
                 in leftResolved,

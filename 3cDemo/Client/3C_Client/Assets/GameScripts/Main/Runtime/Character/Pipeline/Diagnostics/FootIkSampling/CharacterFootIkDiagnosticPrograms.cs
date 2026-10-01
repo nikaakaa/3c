@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticSampler(
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         CharacterFootIkDiagnosticIdentity.FullSamplerId,
-        3,
+        6,
         DiagnosticOutputFormat.Csv,
         IncludeAll = true)]
     internal static class CharacterFootIkFullSamplerDefinition

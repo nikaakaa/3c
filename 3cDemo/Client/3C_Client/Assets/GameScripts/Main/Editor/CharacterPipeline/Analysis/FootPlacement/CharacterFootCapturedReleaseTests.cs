@@ -328,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var evaluation = new CharacterFootStateEvaluation(input.Side, in input.Step, in input.Prediction, in frame,
                     default, input.Grounded, root, in query, targetProbes, outputProbes);
                 CharacterFootLifecycle.Evaluate(ref context, in evaluation, out var receipt);
-                var output = receipt.Complete(ref context, false, out var motion);
+                var output = receipt.Complete(ref context, false, frame.AnimatedHip, out var motion);
                 Vector3 delta = motion.PathContinuity.InterpolationOutputCorrection - motion.PathContinuity.FinalEffectiveCorrection;
                 var rawContacts = input.Animated.ResolveSoleContacts(output.Pose.EffectiveAnkle + delta, output.Pose.EffectiveRotation);
                 var rawSupport = query.Query(input.Sequence, input.CompletionId, revision, input.Side, Vector3.up,

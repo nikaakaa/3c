@@ -265,7 +265,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     historicalAdvance(ref context.Landing, in input.Step, in input.Prediction, in input.Settings);
                     resolve(ref context, in evaluation, out _, out receipt);
                 }
-                var output = receipt.Complete(ref context, false, out _);
+                var output = receipt.Complete(ref context, false, frame.AnimatedHip, out _);
                 float weight = output.GoalTarget.PositionWeight;
                 var contacts = input.Animated.ResolveSoleContacts(
                     Vector3.LerpUnclamped(input.Animated.AnklePosition, root.TransformPoint(output.GoalTarget.ComponentPosition), weight),

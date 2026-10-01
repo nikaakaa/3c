@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static readonly ProfilerMarker s_Complete = new("CharacterPose.FootPlacement.Completion");
         static readonly ProfilerMarker s_SoleSupport = new("CharacterPose.FootPlacement.SoleSupport");
 
-        internal readonly struct Completion
+        internal struct Completion
         {
 
             internal Completion(
@@ -23,9 +23,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in CharacterFootPlacementRequest request,
                 in CharacterFootSwingMotionResult preliminaryMotion,
                 in CharacterFootLifecycleTransitionFact lifecycleTransition,
-                bool landingCompletionPending,
+                bool transitionCompletionPending,
                 in CharacterFootCurrentSupportObservation outputSupport,
-                in CharacterFootCurrentSupportObservation stateTargetSupport)
+                in CharacterFootCurrentSupportObservation stateTargetSupport,
+                Vector3 previousEffectiveSole)
             {
                 Evaluation = evaluation;
                 PreTransition = preTransition;
@@ -35,9 +36,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Request = request;
                 PreliminaryMotion = preliminaryMotion;
                 LifecycleTransition = lifecycleTransition;
-                LandingCompletionPending = landingCompletionPending;
+                TransitionCompletionPending = transitionCompletionPending;
                 OutputSupport = outputSupport;
                 StateTargetSupport = stateTargetSupport;
+                PreviousEffectiveSole = previousEffectiveSole;
             }
 
             readonly CharacterFootStateEvaluation Evaluation;
@@ -48,47 +50,55 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             readonly CharacterFootPlacementRequest Request;
             readonly CharacterFootSwingMotionResult PreliminaryMotion;
             readonly CharacterFootLifecycleTransitionFact LifecycleTransition;
-            bool LandingCompletionPending { get; }
-            internal readonly CharacterFootCurrentSupportObservation OutputSupport;
+            readonly Vector3 PreviousEffectiveSole;
+            bool TransitionCompletionPending { get; }
+            internal CharacterFootCurrentSupportObservation OutputSupport;
             internal readonly CharacterFootCurrentSupportObservation StateTargetSupport;
 
             internal CharacterResolvedFootResult Complete(
                 ref CharacterFootLifecycleContext context,
                 bool landingReachAvailable,
+                Vector3 completedHip,
                 out CharacterFootSwingMotionResult result)
             {
                 using var profilerScope = s_Complete.Auto();
-                if (!LandingCompletionPending)
+                ref readonly CharacterFootStateFrame frame = ref Evaluation.Frame;
+                Vector3 outputCorrection = context.Interpolation.EffectiveCorrection;
+                bool reachLimited = Request.Outcome == CharacterFootResolvedOutcome.Ready &&
+                    Request.Pose.GoalWeight > CharacterFootConstraintMath.GeometryEpsilon &&
+                    (context.Discrete.State == CharacterFootConstraintState.Landing ||
+                     context.Discrete.State == CharacterFootConstraintState.Releasing) &&
+                    LimitContactExtension(in context, in Evaluation, in Request.Pose,
+                        completedHip, out outputCorrection);
+                if (!TransitionCompletionPending && !reachLimited)
                 {
                     result = PreliminaryMotion;
+                    CacheCompletedMotion(ref context, in Evaluation.Frame, in Request, PreviousEffectiveSole);
                     return Publish(in Request);
                 }
-                ref readonly CharacterFootStateFrame frame = ref Evaluation.Frame;
                 ref readonly CharacterFootInterpolationResult interpolation = ref Interpolation;
                 ref readonly CharacterFootTransitionDecision preTransition = ref PreTransition;
                 ref readonly CharacterFootStateTarget target = ref Target;
                 ref readonly CharacterFootPathContinuityFact interpolationContinuity =
                     ref interpolation.ContinuityFact;
                 ref readonly CharacterFootSwingMotionResult outputSwing = ref OutputSwing;
-                CharacterFootTransitionDecision postTransition =
-                    CharacterFootTransitionResolver.ResolvePostInterpolation(
-                        in context,
-                        in frame,
-                        interpolation.Completed,
-                        landingReachAvailable);
-                CharacterFootTransitionRuntime.Apply(
-                    ref context,
-                    in postTransition,
-                    in frame);
-                CharacterFootInterpolationRuntime.ApplyPostTransition(
-                    ref context.Interpolation,
-                    in postTransition);
+                CharacterFootTransitionDecision postTransition = default;
+                if (TransitionCompletionPending)
+                {
+                    postTransition = CharacterFootTransitionResolver.ResolvePostInterpolation(
+                        in context, in frame, interpolation.Completed && !reachLimited, landingReachAvailable);
+                    CharacterFootTransitionRuntime.Apply(ref context, in postTransition, in frame);
+                    CharacterFootInterpolationRuntime.ApplyPostTransition(ref context.Interpolation, in postTransition);
+                }
+                if (reachLimited)
+                    OutputSupport = QueryFootSupport(in context, in Evaluation,
+                        outputCorrection, in interpolation.SupportTarget, Evaluation.OutputProbes);
                 CharacterFootHardConstraintResult hardConstraint =
                     ResolveOutputSupportConstraint(
                         in context, in frame, in interpolation.SupportTarget,
                         OutputSupport,
-                        context.Interpolation.EffectiveCorrection,
-                        interpolation.Correction);
+                        outputCorrection,
+                        reachLimited ? outputCorrection : interpolation.Correction);
                 CharacterFootInterpolationRuntime.ApplyOutputCorrection(
                     ref context.Interpolation,
                     hardConstraint.OutputCorrection);
@@ -101,11 +111,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in interpolation,
                         in hardConstraint,
                         frame.ComponentUp);
-                CharacterFootLifecycleTransitionFact lifecycleTransition =
-                    LifecycleTransition.Complete(
+                CharacterFootLifecycleTransitionFact lifecycleTransition = TransitionCompletionPending
+                    ? LifecycleTransition.Complete(
                         in context,
                         in preTransition,
-                        in postTransition);
+                        in postTransition)
+                    : LifecycleTransition;
                 Vector3 desiredCorrection = ResolveDiagnosticDesiredCorrection(
                     in context,
                     in target,
@@ -126,6 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in continuityFact,
                     in lifecycleTransition,
                     out result);
+                CacheCompletedMotion(ref context, in frame, in completed, PreviousEffectiveSole);
                 return Publish(in completed);
             }
         }
@@ -168,6 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float timeToLandingSeconds = formalFootMotion.HasPredictiveLanding
                 ? formalFootMotion.TimeToLandingSeconds : 0f;
             RequireValid(in frame);
+            Vector3 previousAnimatedSole = context.PreviousAnimatedSole;
             Vector3 previousEffectiveSole = context.PreviousAnimatedSole +
                 (context.Interpolation.PreviousResponseOutputPoint -
                  context.PreviousAnimatedSole) * context.PreviousOutputWeight;
@@ -257,7 +270,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in lifecycleTransition,
                     false,
                     default,
-                    default);
+                    default,
+                    previousEffectiveSole);
                 return unavailable;
             }
             interpolation =
@@ -265,22 +279,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ref context.Interpolation,
                     in target,
                     in frame);
-            Vector3 supportLimitedCorrection = ResolveContactClearance(
-                in context, in frame, in target, in stateTargetSupport,
-                in interpolation, previousEffectiveSole, out bool contactClearancePending);
-            CharacterFootTransitionDecision postTransition =
-                CharacterFootTransitionResolver.ResolvePostInterpolation(
-                    in context,
-                    in frame,
-                    interpolation.Completed && !contactClearancePending,
-                    false);
-            CharacterFootTransitionRuntime.Apply(
-                ref context,
-                in postTransition,
-                in frame);
-            CharacterFootInterpolationRuntime.ApplyPostTransition(
-                ref context.Interpolation,
-                in postTransition);
+            Vector3 supportLimitedCorrection = ResolveContactMotion(
+                ref context, in evaluation, in target, in interpolation,
+                previousAnimatedSole, previousEffectiveSole, out bool contactClearancePending);
+            CharacterFootTransitionDecision postTransition = default;
 
             ref readonly CharacterFootSwingMotionResult frameSwing = ref frame.SwingMotion;
             CharacterFootSwingMotionResult outputSwing = preTransition.SuppressOutput
@@ -351,8 +353,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in continuityFact,
                 in lifecycleTransition,
                 out result);
-            bool landingCompletionPending =
-                context.Discrete.State == CharacterFootConstraintState.Landing &&
+            bool transitionCompletionPending =
+                (context.Discrete.State == CharacterFootConstraintState.Landing ||
+                 context.Discrete.State == CharacterFootConstraintState.Releasing) &&
                 interpolation.Completed && !contactClearancePending;
             receipt = new Completion(
                 in evaluation,
@@ -363,9 +366,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in request,
                 in result,
                 in lifecycleTransition,
-                landingCompletionPending,
+                transitionCompletionPending,
                 in outputSupport,
-                in stateTargetSupport);
+                in stateTargetSupport,
+                previousEffectiveSole);
             return request;
         }
 
@@ -413,33 +417,121 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.Side, frame.ComponentUp, true, in contacts, probes);
         }
 
-        static Vector3 ResolveContactClearance(
-            in CharacterFootLifecycleContext context,
-            in CharacterFootStateFrame frame,
+        static Vector3 ResolveContactMotion(
+            ref CharacterFootLifecycleContext context,
+            in CharacterFootStateEvaluation evaluation,
             in CharacterFootStateTarget target,
-            in CharacterFootCurrentSupportObservation stateTargetSupport,
             in CharacterFootInterpolationResult interpolation,
+            Vector3 previousAnimatedSole,
             Vector3 previousEffectiveSole,
             out bool clearancePending)
         {
             clearancePending = false;
+            ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
             if ((context.Discrete.State != CharacterFootConstraintState.Releasing &&
                  context.Discrete.State != CharacterFootConstraintState.Landing) ||
-                !stateTargetSupport.Available ||
                 !interpolation.CorrectionResponseFact.PreviousOutputAvailable)
                 return interpolation.Correction;
             Vector3 up = frame.ComponentUp.normalized;
-            float minimumCorrection = Vector3.Dot(target.Correction, up) +
-                Mathf.Min(0f, stateTargetSupport.RequiredDisplacement) / frame.FootPlacementWeight;
-            clearancePending = Vector3.Dot(interpolation.Correction, up) +
-                CharacterFootConstraintMath.GeometryEpsilon < minimumCorrection;
-            if (!clearancePending)
-                return interpolation.Correction;
-            Vector3 previousCorrection = (previousEffectiveSole -
-                CharacterFootConstraintMath.ResolveOriginalSole(frame.AnimatedFoot)) /
-                frame.FootPlacementWeight;
-            return Vector3.ProjectOnPlane(previousCorrection, up) +
-                up * Vector3.Dot(interpolation.Correction, up);
+            ref readonly CharacterFootPlacementAnimatedFootPose foot = ref frame.AnimatedFoot;
+            Vector3 originalSole = CharacterFootConstraintMath.ResolveOriginalSole(in foot);
+            Vector3 desiredSole = originalSole + interpolation.Correction * frame.FootPlacementWeight;
+            Vector3 planarMotion = Vector3.ProjectOnPlane(desiredSole - previousEffectiveSole, up);
+            float animationMotionSpeed = frame.DeltaSeconds > 0f
+                ? Vector3.ProjectOnPlane(originalSole - previousAnimatedSole, up).magnitude / frame.DeltaSeconds
+                : 0f;
+            if (target.StateEntered)
+                context.Interpolation.ContactMotionSpeed = 0f;
+            float maximumMotion = Mathf.Max(Mathf.Max(context.Interpolation.ContactMotionSpeed, animationMotionSpeed),
+                frame.Settings.CorrectionResponseDecreaseSpeed * frame.FootPlacementWeight) * frame.DeltaSeconds;
+            Vector3 limitedSole = desiredSole - planarMotion + Vector3.ClampMagnitude(planarMotion, maximumMotion);
+            Vector3 correction = (limitedSole - originalSole) / frame.FootPlacementWeight;
+            float rotationWeight = context.Contact.HasContact
+                ? frame.FootPlacementWeight * frame.LockRequest.Weight : 0f;
+            if (TryResolveFootGoalPose(in foot, originalSole + correction,
+                    in interpolation.SupportTarget, frame.FootPlacementWeight, rotationWeight,
+                    out _, out _, out _, out Vector3 ankle, out Quaternion rotation))
+            {
+                float maximumLegDistance = Mathf.Max(
+                    frame.LegLength - frame.Settings.MinimumLandingLegCompressionReserve,
+                    Vector3.Distance(frame.AnimatedHip, foot.AnklePosition));
+                Vector3 advance = desiredSole - limitedSole;
+                Vector3 requestedAnkle = ankle + advance;
+                float responseReachSquared = Mathf.Max(maximumLegDistance * maximumLegDistance,
+                    (requestedAnkle - frame.AnimatedHip).sqrMagnitude);
+                Vector3 hipOffset = ankle - frame.AnimatedHip;
+                if (hipOffset.sqrMagnitude > responseReachSquared)
+                {
+                    float quadratic = advance.sqrMagnitude;
+                    float linear = Vector3.Dot(hipOffset, advance);
+                    float constant = hipOffset.sqrMagnitude - responseReachSquared;
+                    float progress = (-linear - Mathf.Sqrt(linear * linear - quadratic * constant)) / quadratic;
+                    Vector3 adjustment = advance * progress;
+                    ankle += adjustment;
+                    correction += adjustment / frame.FootPlacementWeight;
+                }
+                CharacterFootPlacementSoleContactPose contacts = foot.ResolveSoleContacts(ankle, rotation);
+                correction += evaluation.SoleSupportQuery.ConstrainMotion(
+                    in contacts, in context.PreviousOutputSoleSamples, up,
+                    ankle, frame.AnimatedHip, maximumLegDistance) / frame.FootPlacementWeight;
+            }
+            clearancePending = (correction - interpolation.Correction).sqrMagnitude >
+                CharacterFootConstraintMath.GeometryEpsilon * CharacterFootConstraintMath.GeometryEpsilon;
+            return correction;
+        }
+
+        static bool LimitContactExtension(
+            in CharacterFootLifecycleContext context,
+            in CharacterFootStateEvaluation evaluation,
+            in CharacterFootPlacementPose pose,
+            Vector3 completedHip,
+            out Vector3 correction)
+        {
+            ref readonly CharacterFootStateFrame frame = ref evaluation.Frame;
+            correction = pose.GoalTargetCorrection;
+            Vector3 hip = completedHip;
+            float maximumDistance = Mathf.Max(
+                frame.LegLength - frame.Settings.MinimumLandingLegCompressionReserve,
+                Vector3.Distance(frame.AnimatedHip, frame.AnimatedFoot.AnklePosition));
+            Vector3 hipOffset = pose.EffectiveAnkle - hip;
+            if (hipOffset.sqrMagnitude <= maximumDistance * maximumDistance)
+                return false;
+            Vector3 up = frame.ComponentUp.normalized;
+            Vector3 vertical = up * Vector3.Dot(hipOffset, up);
+            Vector3 planar = hipOffset - vertical;
+            float planarRadius = Mathf.Sqrt(Mathf.Max(0f,
+                maximumDistance * maximumDistance - vertical.sqrMagnitude));
+            Vector3 adjustment = Vector3.ClampMagnitude(planar, planarRadius) - planar;
+            Vector3 ankle = pose.EffectiveAnkle + adjustment;
+            CharacterFootPlacementSoleContactPose contacts = frame.AnimatedFoot.ResolveSoleContacts(
+                ankle, pose.EffectiveRotation);
+            adjustment += evaluation.SoleSupportQuery.ConstrainMotion(
+                in contacts, in context.PreviousOutputSoleSamples, up,
+                ankle, hip, maximumDistance);
+            correction += adjustment / frame.FootPlacementWeight;
+            return adjustment.sqrMagnitude >
+                CharacterFootConstraintMath.GeometryEpsilon * CharacterFootConstraintMath.GeometryEpsilon;
+        }
+
+        static void CacheCompletedMotion(
+            ref CharacterFootLifecycleContext context,
+            in CharacterFootStateFrame frame,
+            in CharacterFootPlacementRequest request,
+            Vector3 previousEffectiveSole)
+        {
+            if (request.Outcome != CharacterFootResolvedOutcome.Ready ||
+                request.Pose.GoalWeight <= CharacterFootConstraintMath.GeometryEpsilon)
+            {
+                context.PreviousOutputSoleSamples.Clear();
+                return;
+            }
+            if (context.PreviousOutputSoleSamples.Length > 0 && frame.DeltaSeconds > 0f)
+                context.Interpolation.ContactMotionSpeed = Mathf.Max(context.Interpolation.ContactMotionSpeed,
+                    Vector3.ProjectOnPlane(request.Pose.EffectiveSole - previousEffectiveSole, frame.ComponentUp.normalized)
+                        .magnitude / frame.DeltaSeconds);
+            CharacterFootPlacementSoleContactPose contacts = frame.AnimatedFoot.ResolveSoleContacts(
+                request.Pose.EffectiveAnkle, request.Pose.EffectiveRotation);
+            context.PreviousOutputSoleSamples = contacts.SoleSamples;
         }
 
         static CharacterFootHardConstraintResult ResolveOutputSupportConstraint(

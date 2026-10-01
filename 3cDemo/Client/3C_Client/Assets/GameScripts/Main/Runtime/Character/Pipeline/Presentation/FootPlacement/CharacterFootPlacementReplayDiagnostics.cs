@@ -29,6 +29,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField, DiagnosticGroup("replay-input")]
         public Vector3 PreviousAnimatedSole => Value.PreviousAnimatedSole;
 
+        [DiagnosticField, DiagnosticGroup("replay-input")]
+        public float ContactMotionSpeed => Value.Interpolation.ContactMotionSpeed;
+
+        [DiagnosticTable("pre-state-sole-samples", 1, CharacterFootPlacementRigCalibration.MaximumSoleSamples)]
+        public CharacterFootPreviousSoleInputPage PreviousOutputSoleSamples => new(m_Page);
+
         public CharacterFootLandingInputDiagnostics Landing => new(m_Page);
 
         public CharacterFootDiscreteInputDiagnostics Discrete => new(m_Page);
@@ -39,6 +45,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterFootInterpolationInputDiagnostics Interpolation => new(m_Page);
 
+    }
+
+    public readonly struct CharacterFootPreviousSoleInputPage
+    {
+        readonly CharacterFootLifecycleInputPage m_Page;
+        ref readonly FixedList512Bytes<Vector3> Samples => ref m_Page.Value.PreviousOutputSoleSamples;
+
+        internal CharacterFootPreviousSoleInputPage(CharacterFootLifecycleInputPage page) => m_Page = page;
+
+        public int Count => Samples.Length;
+        public CharacterFootPreviousSoleInputRow this[int index] => new(index, Samples[index]);
+    }
+
+    public readonly struct CharacterFootPreviousSoleInputRow
+    {
+        internal CharacterFootPreviousSoleInputRow(int sampleIndex, Vector3 position)
+        {
+            SampleIndex = sampleIndex;
+            Position = position;
+        }
+
+        [DiagnosticField, DiagnosticGroup("replay-input")]
+        public int SampleIndex { get; }
+
+        [DiagnosticField, DiagnosticGroup("replay-input")]
+        public Vector3 Position { get; }
     }
 
     public readonly struct CharacterFootLandingInputDiagnostics

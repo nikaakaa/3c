@@ -559,6 +559,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         CharacterFootCurrentSupportProbeResult Query(
             in CharacterFootCurrentSupportProbeRequest request);
+
+        bool QueryMotion(
+            Vector3 origin, Vector3 destination, Vector3 unitComponentUp,
+            in CharacterFootCurrentSupportQuerySettings settings,
+            out Vector3 point, out Vector3 normal);
     }
 
     internal sealed class CharacterFootCurrentSupportObservationPage
@@ -624,6 +629,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             m_World = world;
             m_Settings = settings;
+        }
+
+        internal Vector3 ConstrainMotion(
+            in CharacterFootPlacementSoleContactPose contacts,
+            in FixedList512Bytes<Vector3> previousOutput,
+            Vector3 unitComponentUp,
+            Vector3 ankle, Vector3 hip, float maximumLegDistance)
+        {
+            Vector3 adjustment = default;
+            for (int i = 0; i < previousOutput.Length; i++)
+            {
+                Vector3 origin = previousOutput[i];
+                Vector3 destination = contacts.SoleSamples[i] + adjustment;
+                if (!m_World.QueryMotion(origin, destination, unitComponentUp, in m_Settings,
+                        out Vector3 point, out Vector3 normal))
+                    continue;
+                Vector3 planarNormal = Vector3.ProjectOnPlane(normal, unitComponentUp);
+                float penetration = Vector3.Dot(point - destination, normal);
+                if (penetration > 0f)
+                {
+                    adjustment += planarNormal * ((penetration + CharacterFootConstraintMath.GeometryEpsilon) /
+                        planarNormal.sqrMagnitude);
+                    Vector3 hipOffset = ankle + adjustment - hip;
+                    if (hipOffset.sqrMagnitude > maximumLegDistance * maximumLegDistance)
+                    {
+                        Vector3 fixedOffset = unitComponentUp * Vector3.Dot(hipOffset, unitComponentUp) +
+                            Vector3.Project(hipOffset, planarNormal);
+                        Vector3 tangent = hipOffset - fixedOffset;
+                        float tangentRadius = Mathf.Sqrt(Mathf.Max(0f,
+                            maximumLegDistance * maximumLegDistance - fixedOffset.sqrMagnitude));
+                        adjustment += Vector3.ClampMagnitude(tangent, tangentRadius) - tangent;
+                    }
+                }
+            }
+            return adjustment;
         }
 
         internal CharacterFootCurrentSupportObservation Query(

@@ -1499,6 +1499,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousTargetCorrection;
         internal Vector3 PreviousSwingTargetCorrection;
         internal Vector3 EffectiveCorrection;
+        internal float ContactMotionSpeed;
         internal Vector3 SwingResidual;
         internal bool HasTargetHeight;
         internal ulong TargetHeightEventIdentity;
@@ -1537,6 +1538,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal float PreviousOutputWeight;
         internal Vector3 PreviousAnimatedSole;
+        internal FixedList512Bytes<Vector3> PreviousOutputSoleSamples;
         internal CharacterFootLandingContext Landing;
         internal CharacterFootDiscreteStateContext Discrete;
         internal CharacterFootContactContext Contact;

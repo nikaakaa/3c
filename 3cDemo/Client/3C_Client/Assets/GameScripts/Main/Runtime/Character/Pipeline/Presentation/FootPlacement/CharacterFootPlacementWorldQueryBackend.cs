@@ -463,6 +463,43 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selected.distance, queryRevision);
         }
 
+        public bool QueryMotion(
+            Vector3 origin, Vector3 destination, Vector3 unitComponentUp,
+            in CharacterFootCurrentSupportQuerySettings settings,
+            out Vector3 point, out Vector3 normal)
+        {
+            point = default;
+            normal = default;
+            Vector3 motion = destination - origin;
+            float distance = motion.magnitude;
+            if (distance <= CharacterFootConstraintMath.GeometryEpsilon)
+                return false;
+            int count = m_PhysicsScene.Raycast(origin, motion / distance, m_CurrentSupportHits,
+                distance, settings.GroundLayerMask, QueryTriggerInteraction.Ignore);
+            if (count == m_CurrentSupportHits.Length)
+                throw new InvalidOperationException("Foot motion query exceeded its hit capacity.");
+            bool found = false;
+            RaycastHit selected = default;
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = m_CurrentSupportHits[i];
+                if (m_Rig.IsSelfCollider(hit.collider) ||
+                    Vector3.Dot(hit.normal, unitComponentUp) >= settings.MinimumGroundNormalDot ||
+                    Vector3.ProjectOnPlane(hit.normal, unitComponentUp).sqrMagnitude <=
+                        CharacterFootConstraintMath.GeometryEpsilon * CharacterFootConstraintMath.GeometryEpsilon)
+                    continue;
+                if (!found || CompareCurrentSupport(hit, selected) < 0)
+                    selected = hit;
+                found = true;
+            }
+            if (found)
+            {
+                point = selected.point;
+                normal = selected.normal;
+            }
+            return found;
+        }
+
         int ResolveSupportCandidates(
             RaycastHit[] hits,
             int count,

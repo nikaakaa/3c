@@ -115,9 +115,10 @@
     </div>
   </section>
   <section class="first-work" id="motion-progress" aria-labelledby="motion-progress-title">
-    <div class="eyebrow">已经完成的推进 · 2026.10.01</div>
+    <div class="eyebrow">正式版本已复测 · 2026.10.01 21:12 · a39182acd</div>
     <h2 id="motion-progress-title">先让脚走完能走的距离，再用实际骨盆检查够不够得到</h2>
     <p class="first-work-lead">旧逻辑遇到高度未就绪，会取消后脚整段水平位移，身体却继续前进。现在沿上一完成脚掌到本帧脚掌查询真实阻挡面，保留可走的位移；双脚骨盆算完以后，再处理脚目标的剩余超长，结果交回原插值历史。</p>
+    <p class="first-work-example"><b>刚完成的实际测试：</b>原台阶 15 帧、攻击释放 33 帧、动画切换 58 帧，共 <strong>106 帧</strong>。三窗正式输出与前次复查逐帧一致；Foot 计算段均为 0 B。台阶突进和目标腿长改善已重复得到，动画额外旋转仍未修好。<a href="ik-tests/contact-motion-user-recheck-20261001.zip">查看本次执行产物</a></p>
     <div class="first-work-flow">
       <article><span>输入</span><h3>上一次真正完成的脚掌</h3><p>包括各脚掌点的世界位置，不拿已被本帧查询覆盖的缓存冒充历史。</p></article>
       <article><span>推进</span><h3>到竖面前仍可以走</h3><p>原 12572 的首个脚掌点约走到请求路径的 94% 才碰到台阶竖面，旧版却把全部水平位移清掉。</p></article>
@@ -898,7 +899,7 @@ selectCase(0);renderCharts();
   for(const t of [.5,.75,1,1.25]){add('line',{x1:55,x2:860,y1:Y(t),y2:Y(t),stroke:t===1?'#a77527':'#dce2dc','stroke-dasharray':t===1?'5 4':'1 0'});add('text',{x:45,y:Y(t)+5,'text-anchor':'end',fill:'#657477','font-size':13},Math.round(t*100)+'%');}
   for(const [v,c] of [['baseline','#cf513e'],['candidate','#127d73']]){add('path',{d:d[v].map((r,j)=>(j?'L':'M')+X(j)+','+Y(r[key])).join(' '),fill:'none',stroke:c,'stroke-width':2.5});add('circle',{cx:X(i),cy:Y(d[v][i][key]),r:4,fill:c});}
   add('line',{x1:X(i),x2:X(i),y1:35,y2:215,stroke:'#202e31','stroke-dasharray':'3 4'});
-  add('text',{x:55,y:23,fill:'#cf513e','font-size':14},'原版');add('text',{x:115,y:23,fill:'#127d73','font-size':14},'候选');
+  add('text',{x:55,y:23,fill:'#cf513e','font-size':14},'原版');add('text',{x:115,y:23,fill:'#127d73','font-size':14},'正式版');
   add('text',{x:55,y:242,fill:'#657477','font-size':13},d.baseline[0].frame);add('text',{x:860,y:242,fill:'#657477','font-size':13,'text-anchor':'end'},d.baseline[n-1].frame);
   document.getElementById('motion-frame-label').textContent=a.frame;
   const fmt=x=>x==null?'无前帧差分':(x*100).toFixed(2)+' cm';

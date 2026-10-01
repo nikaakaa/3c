@@ -13009,5 +13009,98 @@
       "scriptCompilationFailed": false,
       "capabilityRevision": 7
     }
+  },
+  "requestedRecheck": {
+    "checkedAt": "2026-10-01T13:12:33.4066267Z",
+    "productionCommit": "a39182acd",
+    "execution": "现有入口执行当前 Unity 中的正式运行程序集；不是 Replay 或 FBBIK。",
+    "runtime": {
+      "utc": "2026-10-01T13:12:33.4066267Z",
+      "projectPath": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client",
+      "scene": "Assets/Scenes/GameplayLab/GameplayLabFixed.unity",
+      "runtimeMvid": "39ba0ed7-bc68-4a86-88e1-445418200a33",
+      "runtimeAssembly": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Library\\ScriptAssemblies\\ThirdPersonCharacter.Animation.dll",
+      "playing": false,
+      "compiling": false,
+      "compilationFailed": false
+    },
+    "cases": {
+      "stair": {
+        "metrics": {
+          "frames": 15,
+          "probeMatches": 368,
+          "allocatedBytes": 0,
+          "maximumTargetExtensionBefore": 1.156251,
+          "maximumTargetExtensionAfter": 1.00124419,
+          "releaseHorizontalStepBefore": 0.201616436,
+          "releaseHorizontalStepAfter": 0.01925299,
+          "maximumHorizontalStepBefore": 0.214673027,
+          "maximumHorizontalStepAfter": 0.213018134,
+          "maximumFinalPenetration": 0.0,
+          "maximumFinalHeightClamp": 0.0,
+          "maximumDifferenceFromPreviousProduction": 0.0
+        },
+        "result": "3cDemo/Client/3C_Client/Temp/FootMotionAdvance20261001/user-recheck-20261001-211203/stair.json",
+        "sha256": "663935c5ef0faab892c4f05288e5d7d83cd6cfd1cbfabbe27aa03bfbb57709d8"
+      },
+      "paired": {
+        "metrics": {
+          "status": "passed",
+          "frames": 33,
+          "allocatedBytes": 0,
+          "rightOverreachBefore": 8,
+          "rightOverreachAfter": 0,
+          "leftOverreachBefore": 0,
+          "leftOverreachAfter": 0,
+          "maximumRightExtension": 0.9991555,
+          "maximumLeftExtension": 0.982304454,
+          "maximumRightStepBefore": 0.446361572,
+          "maximumRightStepAfter": 0.406229973,
+          "maximumRightFinalPenetration": 0.0,
+          "maximumLeftFinalPenetration": 0,
+          "maximumDifferenceFromPreviousProduction": 0.0,
+          "rightContactFrames": 10,
+          "rightMaximumAdditionalContactGap": 0.0,
+          "leftContactFrames": 0,
+          "maximumCorrectionDeltaBefore": 0.301888393096922,
+          "maximumCorrectionDeltaAfter": 0.307711568734644,
+          "maximumRightCorrectionRotationStepDegrees": 10.65681
+        },
+        "result": "3cDemo/Client/3C_Client/Temp/FootMotionAdvance20261001/user-recheck-20261001-211203/paired.json",
+        "sha256": "caa0ad83f4a3eb7c688e15ddfdb2836e96eb1097f7d63cf1cf83ef22212fb1f9"
+      },
+      "switch": {
+        "metrics": {
+          "status": "passed",
+          "frames": 58,
+          "allocatedBytes": 0,
+          "rightOverreachBefore": 0,
+          "rightOverreachAfter": 0,
+          "leftOverreachBefore": 1,
+          "leftOverreachAfter": 0,
+          "maximumRightExtension": 0.985070765,
+          "maximumLeftExtension": 0.9785616,
+          "maximumRightStepBefore": 0.3541145,
+          "maximumRightStepAfter": 0.350730479,
+          "maximumRightFinalPenetration": 7.450581e-09,
+          "maximumLeftFinalPenetration": 7.450581e-09,
+          "maximumDifferenceFromPreviousProduction": 0.0,
+          "maximumRightCorrectionRotationStepDegrees": 31.1800938
+        },
+        "result": "3cDemo/Client/3C_Client/Temp/FootMotionAdvance20261001/user-recheck-20261001-211203/switch.json",
+        "sha256": "d3e30cb7e1c3f67953f2318f242159b7d8645c9c736a4bb96e3bf7a67d13b22c"
+      }
+    },
+    "limitations": [
+      "台阶夹具原髋与 source 踝跨骨盆阶段，12576 输入自身为 100.1243%，输出为 100.1244%；保留原输入。",
+      "2041 相对动画的修正变化增加约 5.8 mm，实际脚位移动减小。",
+      "切换窗口 IK 额外旋转仍有 31.180094°；第三项未完成。",
+      "58 帧未独立导出 heel/toe 间隙，不能把整体最小间隙代替端点值。",
+      "本次未执行真正 Replay、完整 FBBIK 或采样启动与保存。"
+    ],
+    "archive": {
+      "path": "docs/diagnostics/foot-placement/ik-tests/contact-motion-user-recheck-20261001.zip",
+      "sha256": "92ba33ca678eac6ce514496febfde7ab8ef0be3d4ba19db98b773dff602c9ffb"
+    }
   }
 }

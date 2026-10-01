@@ -2,6 +2,8 @@
 
 整理日期：2026-10-01。脚部质量尚未闭环；阶段报告归档不改变其中记录的失败事实，也不把编译、缓存 Apply 或单段修复当作整体行为验收。
 
+2026-10-01 21:12 按用户要求再次执行正式提交 `a39182acd` 的 15＋33＋58 帧，共 106 帧；三窗输出与上一次生产复查逐帧完全一致，所有 Foot 计算段仍为 0 B。原始结果与执行时的项目、场景、MVID 已封存于[用户复测](../diagnostics/foot-placement/ik-tests/contact-motion-user-recheck-20261001.zip)，汇总在[本轮报告](../diagnostics/foot-placement/contact-motion-offline-20261001.json)的 `requestedRecheck`。此次测试止于正式 Goal 与实际 Physics，未执行 Replay／FBBIK；额外旋转仍为 31.180094°，第三项未完成。
+
 用户新增的“平地上台阶时后脚跳一下”继续归入台阶换面问题。已对照历史与现行源码，将当前接触被下一步包络误抬、实际脚端跨面后末端补高、输入姿态／响应自身上移、重新着地新目标接入四种情况分开。最新录制两次约 20 cm 的接入前旧历史已经清空，不能套用 2dad 的陈旧残差原因。数值及坐标阶段见[后脚换面核对](../diagnostics/foot-placement/README.md#后脚换面核对2026-10-01)，[经验文档](../reference/foot-placement/implementation-lessons.md)已更新当前规则、保留／否决边界及第 80～82 条。
 
 本轮跨面推进与骨盆后可达处理已进入正式 Assets。原台阶 15 帧、攻击释放 33 帧与另一动画切换 58 帧均已用正式运行程序集实际执行。攻击释放右腿目标超长 8→0，左腿保持 0；切换窗口左腿 1→0，右腿保持 0。两窗计算预热后均为 0 B，没有新增正穿透。生产 Animation 与 FootIkDiagnosticSampling 程序集定向编译通过，均为 0 警告、0 错误；目标 Unity 已加载新接口。最终骨骼和真正 Replay 尚未执行。不能把单项改善写成三个问题整体解决。完整数值、源码补丁、编译输入与早期失败版本已封存于[本轮证据](../diagnostics/foot-placement/contact-motion-offline-20261001.json)。

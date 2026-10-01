@@ -15,7 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         static readonly BtsmtlSkillGraphClosureIndex s_Sources = new();
         static readonly List<RuntimeInstanceKey> s_Instances = new();
-        static BtsmtlSkillGraphFingerprint s_Fingerprint;
         static CharacterPipelineDefinition s_Definition;
         static Guid s_SessionId;
         static RuntimeContentRevision s_Revision;
@@ -47,7 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !s_Revision.Equals(target.Revision))
             {
                 s_Sources.Build(definition);
-                s_Fingerprint = new BtsmtlSkillGraphFingerprint();
                 s_Definition = definition;
                 s_SessionId = target.SessionId;
                 s_Revision = target.Revision;
@@ -58,13 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal static FlowGraph ResolveGraph(CharacterPipelineDefinition definition, string graphAuthoringId) =>
             GetSources(definition).Graphs[graphAuthoringId];
 
-        internal static RuntimeDebugTargetRequest CreateTargetRequest(CharacterPipelineDefinition definition, FlowGraph graph)
-        {
-            GetSources(definition);
-            return new RuntimeDebugTargetRequest(
-                RuntimeSourceElementKey.Graph(((IBtsmtlSkillFlowGraph)graph).AuthoringId),
-                s_Fingerprint.Compute(graph));
-        }
+        internal static NodeCanvas.Framework.IGraphElement ResolveElement(CharacterPipelineDefinition definition, RuntimeSourceElementKey source) =>
+            GetSources(definition).Elements[source];
 
         public static bool Open(RuntimeDebugEventView eventView, bool pin = false, bool preserveFocus = false)
         {
@@ -75,45 +68,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RuntimeInstanceKey instance = trace.RuntimeInstance;
                 RuntimeDebugSession session = RuntimeDebugSession.Shared;
                 bool historical = session.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended;
-                if (!instance.IsValid || !eventView.Source.IsValid)
-                    return false;
-                RuntimeDiagnosticsTarget target = null;
+                if (!historical)
+                    session.AttachToTarget(instance.CharacterRuntimeId);
                 RuntimeDebugTargetInfo targetInfo = session.ViewModel.Target;
-                if (historical)
-                {
-                    if (!session.TryResolveHistoricalSource(
-                            trace.ContentRevision,
-                            trace.Source,
-                            out RuntimeSourceElementKey historicalSource,
-                            out DebugSourceMapEntry historicalEntry) ||
-                        !historicalSource.Equals(eventView.Source) ||
-                        !historicalEntry.Source.Equals(eventView.Source))
-                        return false;
-                }
-                else
-                {
-                    if (!RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out target) ||
-                        target.SessionId != trace.SessionId ||
-                        !target.Context.TryGetSourceMap(trace.ContentRevision, out IDebugSourceMap sourceMap) ||
-                        !sourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) ||
-                        !entry.Source.Equals(eventView.Source))
-                        return false;
-                    targetInfo = new RuntimeDebugTargetInfo(target);
-                }
-                if (targetInfo.CharacterRuntimeId != instance.CharacterRuntimeId)
-                    return false;
                 CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(targetInfo.HostInstanceId));
-                if (!definition)
-                    return false;
-                if (!historical &&
-                    !session.AttachToTarget(instance.CharacterRuntimeId))
-                    return false;
                 if (eventView.Source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or
                     RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
                 {
-                    return OpenTimelineSource(definition, eventView.Source, instance, trace.Payload.TimelinePlayback, pin);
+                    return OpenTimelineSource(definition, instance, trace.Payload.TimelinePlayback, pin);
                 }
-                return Open(definition, eventView.Source, instance, default, string.Empty, pin);
+                return Open(definition, eventView.Source, instance, default, pin);
             }
             finally
             {
@@ -122,32 +86,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
-            => Open(definition, source, instance, default, string.Empty, false);
+            => Open(definition, source, instance, default, false);
 
         static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source,
-            RuntimeInstanceKey instance, RuntimeInstanceKey playback, string expectedTimelineId, bool pin)
+            RuntimeInstanceKey instance, RuntimeInstanceKey playback, bool pin)
         {
-            if (!definition || !source.IsValid)
-                return false;
-
-            return !string.IsNullOrEmpty(source.GraphAuthoringId) &&
-                   GetSources(definition).Graphs.TryGetValue(source.GraphAuthoringId, out FlowGraph graph) &&
-                   OpenSkillGraph(definition, graph, source, instance, playback, expectedTimelineId, pin);
+            FlowGraph graph = GetSources(definition).Graphs[source.GraphAuthoringId];
+            return OpenSkillGraph(definition, graph, source, instance, playback, pin);
         }
 
         static bool OpenTimelineSource(
             CharacterPipelineDefinition definition,
-            RuntimeSourceElementKey source,
             RuntimeInstanceKey instance,
             RuntimeTimelinePlaybackProvenance provenance,
             bool pin)
         {
-            if (!provenance.IsValid || string.IsNullOrEmpty(source.TimelineAuthoringId) ||
-                string.IsNullOrEmpty(provenance.SourceGraphAuthoringId) ||
-                string.IsNullOrEmpty(provenance.SourceNodeAuthoringId))
-            {
-                return false;
-            }
             if (!TryResolveTimelineGraphInstance(
                     RuntimeDebugSession.Shared.ViewModel,
                     instance,
@@ -162,7 +115,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     provenance.SourceNodeAuthoringId),
                 graphInstance,
                 instance,
-                source.TimelineAuthoringId,
                 pin);
         }
 
@@ -187,45 +139,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     candidate.InvocationGeneration != provenance.SourceActivationGeneration ||
                     !string.Equals(candidate.CallSiteId, provenance.SourceInvocationPath, StringComparison.Ordinal))
                     continue;
-                if (graphInstance.IsValid)
-                    return false;
                 graphInstance = candidate;
+                return true;
             }
-            return graphInstance.IsValid;
+            return false;
         }
 
         static bool OpenSkillGraph(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeSourceElementKey source,
-            RuntimeInstanceKey instance, RuntimeInstanceKey playback, string expectedTimelineId, bool pin)
+            RuntimeInstanceKey instance, RuntimeInstanceKey playback, bool pin)
         {
             NodeCanvas.Framework.IGraphElement element = null;
             if (source.Kind is RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Port)
-                GetSources(definition).Elements.TryGetValue(
-                    RuntimeSourceElementKey.Node(source.GraphAuthoringId, source.ElementAuthoringId), out element);
+                element = ResolveElement(definition,
+                    RuntimeSourceElementKey.Node(source.GraphAuthoringId, source.ElementAuthoringId));
             else if (source.Kind == RuntimeSourceElementKind.Edge)
-                GetSources(definition).Elements.TryGetValue(source, out element);
-            else if (source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
-            {
-                int matches = 0;
-                for (int i = 0; i < graph.allNodes.Count; i++)
-                {
-                    if (graph.allNodes[i] is not BtsmtlSkillTimelineFlowNode timeline || timeline.Timeline == null ||
-                        !string.Equals(timeline.Timeline.AuthoringId, source.TimelineAuthoringId, StringComparison.Ordinal))
-                        continue;
-                    element = timeline;
-                    matches++;
-                }
-                if (matches != 1)
-                    return false;
-            }
+                element = ResolveElement(definition, source);
             else if (source.Kind is not RuntimeSourceElementKind.Graph and not RuntimeSourceElementKind.BlackboardDeclaration)
                 return false;
-            if (source.Kind is not RuntimeSourceElementKind.Graph and not RuntimeSourceElementKind.BlackboardDeclaration && element == null)
-                return false;
-            if (playback.IsValid &&
-                (element is not BtsmtlSkillTimelineFlowNode playbackNode ||
-                 !string.Equals(playbackNode.Timeline?.AuthoringId, expectedTimelineId, StringComparison.Ordinal)))
-                return false;
-
             bool graphAlreadyOpen = GraphEditor.current != null &&
                                     ReferenceEquals(GraphEditor.rootGraph, graph) &&
                                     ReferenceEquals(GraphEditor.currentGraph, graph);
@@ -273,8 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RuntimeInstanceKey selected = playback.IsValid ? playback : ResolveTimelinePlayback(instance);
                     if (selected.IsValid)
                     {
-                        if (!timelineWindow.SelectRuntimeObservationPlayback(selected, pin))
-                            return false;
+                        timelineWindow.SelectRuntimeObservationPlayback(selected, pin);
                         TimelineRuntimeObservationBridge.RefreshWindow(timelineWindow);
                     }
                 }

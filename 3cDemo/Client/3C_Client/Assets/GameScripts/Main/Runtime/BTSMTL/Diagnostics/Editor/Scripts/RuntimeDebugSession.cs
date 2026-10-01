@@ -437,9 +437,6 @@ namespace BTSMTL.Diagnostics.Editor
 
         public RuntimeDebugTargetResolution ResolveTarget(RuntimeDebugTargetRequest request)
         {
-            if (!request.IsValid)
-                return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.InvalidSource);
-
             RuntimeDebugSceneSelection explicitSelection = RuntimeDebugSceneSelectionRegistry.Resolve();
             if (m_AttachmentState == RuntimeDebugAttachmentState.Ended)
             {
@@ -451,7 +448,7 @@ namespace BTSMTL.Diagnostics.Editor
                         Attach(replacement);
                         return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Attached);
                     }
-                    return CreateExplicitMismatchResolution(replacementMatch, GetTargetCandidates(request));
+                    return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.ExplicitHostSourceMissing, GetTargetCandidates(request));
                 }
 
                 return CreateEndedResolution(request);
@@ -464,7 +461,7 @@ namespace BTSMTL.Diagnostics.Editor
 
                 RuntimeDebugTargetMatch selectedMatch = MatchTarget(selectedTarget, request);
                 if (selectedMatch != RuntimeDebugTargetMatch.Exact)
-                    return CreateExplicitMismatchResolution(selectedMatch, GetTargetCandidates(request));
+                    return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.ExplicitHostSourceMissing, GetTargetCandidates(request));
 
                 Attach(selectedTarget);
                 return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Attached);
@@ -498,20 +495,15 @@ namespace BTSMTL.Diagnostics.Editor
                 candidates);
         }
 
-        public RuntimeDebugTargetResolution ResolvePinnedTarget(RuntimeDebugTargetRequest request, Guid characterRuntimeId)
+        public RuntimeDebugTargetResolution ResolvePinnedTarget(Guid characterRuntimeId)
         {
-            if (!request.IsValid)
-                return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.InvalidSource);
-            if (characterRuntimeId == Guid.Empty || m_ViewModel.Target.CharacterRuntimeId != characterRuntimeId)
+            if (m_ViewModel.Target.CharacterRuntimeId != characterRuntimeId)
                 return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.PinnedTargetNotAttached);
             if (m_AttachmentState == RuntimeDebugAttachmentState.Ended)
-                return CreateEndedResolution(request);
+                return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Ended);
             if (m_Target == null || m_Target.CharacterRuntimeId != characterRuntimeId)
                 return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.PinnedTargetNotAttached);
-            RuntimeDebugTargetMatch match = MatchTarget(m_Target, request);
-            return match == RuntimeDebugTargetMatch.Exact
-                ? new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Attached)
-                : CreateExplicitMismatchResolution(match, GetTargetCandidates(request));
+            return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Attached);
         }
 
         public void Dispose()
@@ -662,40 +654,18 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugTargetMatch match = m_Frozen?.MatchSource(request) ?? RuntimeDebugTargetMatch.SourceMissing;
             if (match == RuntimeDebugTargetMatch.Exact)
                 return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.Ended);
-            return new RuntimeDebugTargetResolution(
-                match == RuntimeDebugTargetMatch.SourceMissing
-                    ? RuntimeDebugTargetResolutionStatus.SourceMissing
-                    : RuntimeDebugTargetResolutionStatus.RevisionMismatch);
-        }
-
-        static RuntimeDebugTargetResolution CreateExplicitMismatchResolution(
-            RuntimeDebugTargetMatch match,
-            IReadOnlyList<RuntimeDebugTargetCandidate> candidates)
-        {
-            return new RuntimeDebugTargetResolution(
-                match == RuntimeDebugTargetMatch.SourceMissing
-                    ? RuntimeDebugTargetResolutionStatus.ExplicitHostSourceMissing
-                    : RuntimeDebugTargetResolutionStatus.ExplicitHostRevisionMismatch,
-                candidates);
+            return new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.SourceMissing);
         }
 
         static RuntimeDebugTargetMatch MatchTarget(RuntimeDiagnosticsTarget target, RuntimeDebugTargetRequest request)
         {
-            if (target == null || !request.IsValid)
-                return RuntimeDebugTargetMatch.SourceMissing;
-
-            RuntimeDebugTargetMatch match = RuntimeDebugTargetMatch.SourceMissing;
             foreach (IDebugSourceMap sourceMap in target.Context.SourceMaps)
             {
                 IReadOnlyList<RuntimeSourceElementHandle> handles = sourceMap.FindHandles(request.Source);
                 if (handles.Count != 0)
-                    match = RuntimeDebugTargetMatch.RevisionMismatch;
-                for (int i = 0; i < handles.Count; i++)
-                    if (sourceMap.TryGet(handles[i], out DebugSourceMapEntry entry) &&
-                        string.Equals(entry.ContentHash, request.ContentHash, StringComparison.Ordinal))
-                        return RuntimeDebugTargetMatch.Exact;
+                    return RuntimeDebugTargetMatch.Exact;
             }
-            return match;
+            return RuntimeDebugTargetMatch.SourceMissing;
         }
 
         static bool TryFindTargetByHost(int hostInstanceId, out RuntimeDiagnosticsTarget target)

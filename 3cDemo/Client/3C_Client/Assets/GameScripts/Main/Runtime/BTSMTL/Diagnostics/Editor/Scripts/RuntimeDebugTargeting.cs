@@ -15,8 +15,7 @@ namespace BTSMTL.Diagnostics.Editor
     public enum RuntimeDebugTargetMatch
     {
         Exact,
-        SourceMissing,
-        RevisionMismatch
+        SourceMissing
     }
 
     public enum RuntimeDebugTargetResolutionStatus
@@ -25,35 +24,28 @@ namespace BTSMTL.Diagnostics.Editor
         Ended,
         ExplicitHostUnregistered,
         ExplicitHostSourceMissing,
-        ExplicitHostRevisionMismatch,
         SourceMissing,
-        RevisionMismatch,
         NoExactTarget,
         MultipleExactTargets,
-        InvalidSource,
         PinnedTargetNotAttached
     }
 
     public readonly struct RuntimeDebugTargetRequest : IEquatable<RuntimeDebugTargetRequest>
     {
-        public RuntimeDebugTargetRequest(RuntimeSourceElementKey source, string contentHash)
+        public RuntimeDebugTargetRequest(RuntimeSourceElementKey source)
         {
             Source = source;
-            ContentHash = contentHash ?? string.Empty;
         }
 
         public RuntimeSourceElementKey Source { get; }
-        public string ContentHash { get; }
-        public bool IsValid => Source.IsValid && !string.IsNullOrEmpty(ContentHash);
 
         public bool Equals(RuntimeDebugTargetRequest other)
         {
-            return Source.Equals(other.Source) &&
-                   string.Equals(ContentHash, other.ContentHash, StringComparison.Ordinal);
+            return Source.Equals(other.Source);
         }
 
         public override bool Equals(object obj) => obj is RuntimeDebugTargetRequest other && Equals(other);
-        public override int GetHashCode() => Source.GetHashCode() * 397 ^ (ContentHash?.GetHashCode() ?? 0);
+        public override int GetHashCode() => Source.GetHashCode();
     }
 
     public readonly struct RuntimeDebugSceneSelection
@@ -73,7 +65,7 @@ namespace BTSMTL.Diagnostics.Editor
 
         public static void Register(Func<RuntimeDebugSceneSelection> resolver)
         {
-            s_Resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+            s_Resolver = resolver;
         }
 
         public static RuntimeDebugSceneSelection Resolve()
@@ -117,12 +109,9 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugTargetResolutionStatus.Ended => "Target ended. Showing frozen history.",
             RuntimeDebugTargetResolutionStatus.ExplicitHostUnregistered => "The selected character host is not registered.",
             RuntimeDebugTargetResolutionStatus.ExplicitHostSourceMissing => "The selected character host does not contain this authoring source.",
-            RuntimeDebugTargetResolutionStatus.ExplicitHostRevisionMismatch => "The selected character host was built from a different source revision.",
             RuntimeDebugTargetResolutionStatus.SourceMissing => "The attached trace does not contain this authoring source.",
-            RuntimeDebugTargetResolutionStatus.RevisionMismatch => "The attached trace was built from a different source revision.",
             RuntimeDebugTargetResolutionStatus.NoExactTarget => "No registered target exactly matches this authoring source.",
             RuntimeDebugTargetResolutionStatus.MultipleExactTargets => "Multiple registered targets match this authoring source. Choose a target.",
-            RuntimeDebugTargetResolutionStatus.InvalidSource => "The current authoring source has no stable identity or content hash.",
             RuntimeDebugTargetResolutionStatus.PinnedTargetNotAttached => "The pinned runtime target is not attached. Select that target or explicitly resume Follow.",
             _ => string.Empty
         };

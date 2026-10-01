@@ -52,7 +52,7 @@ namespace BTSMTL.Diagnostics.Editor
         public RuntimeDebugTargetResolution Resolution => m_Resolution;
         public bool Following => m_Mode == RuntimeDebugViewBindingMode.Following;
         public bool Pinned => m_Mode == RuntimeDebugViewBindingMode.Pinned;
-        public bool CanReadSelectedInstance => m_Resolution.CanReadSnapshot && m_Status == RuntimeDebugViewBindingStatus.Ready && m_SelectedInstance.IsValid;
+        public bool CanReadSelectedInstance => m_Resolution.CanReadSnapshot && m_Status == RuntimeDebugViewBindingStatus.Ready;
 
         public string StatusMessage
         {
@@ -103,21 +103,15 @@ namespace BTSMTL.Diagnostics.Editor
             m_Status = RuntimeDebugViewBindingStatus.NoSelection;
         }
 
-        public bool Pin(RuntimeInstanceKey instance)
+        public void Pin(RuntimeInstanceKey instance)
         {
-            if (!instance.IsValid || (Kind == RuntimeDebugViewKind.Timeline && instance.Kind != RuntimeInstanceKind.TimelinePlayback))
-                return false;
-
             m_Mode = RuntimeDebugViewBindingMode.Pinned;
             m_SelectedInstance = instance;
             m_BoundCharacterRuntimeId = instance.CharacterRuntimeId;
-            return true;
         }
 
         public void AwaitInstance(Guid characterRuntimeId)
         {
-            if (characterRuntimeId == Guid.Empty)
-                throw new ArgumentException("等待实例必须绑定明确角色。", nameof(characterRuntimeId));
             m_Mode = RuntimeDebugViewBindingMode.Pinned;
             m_SelectedInstance = default;
             m_BoundCharacterRuntimeId = characterRuntimeId;
@@ -131,16 +125,8 @@ namespace BTSMTL.Diagnostics.Editor
 
         public RuntimeDebugTargetResolution Refresh(RuntimeDebugSession session, RuntimeTraceChannel channels)
         {
-            if (session == null)
-            {
-                m_Resolution = new RuntimeDebugTargetResolution(RuntimeDebugTargetResolutionStatus.NoExactTarget);
-                if (m_Mode != RuntimeDebugViewBindingMode.Pinned)
-                    m_SelectedInstance = default;
-                return m_Resolution;
-            }
-
             m_Resolution = m_Mode == RuntimeDebugViewBindingMode.Pinned
-                ? session.ResolvePinnedTarget(m_Request, m_BoundCharacterRuntimeId)
+                ? session.ResolvePinnedTarget(m_BoundCharacterRuntimeId)
                 : session.ResolveTarget(m_Request);
             if (!m_Resolution.CanReadSnapshot)
             {
@@ -156,13 +142,6 @@ namespace BTSMTL.Diagnostics.Editor
                 session.ReleaseLiveInterest(this);
 
             RuntimeDebugViewModel view = session.ViewModel;
-            if (!view.Valid)
-            {
-                if (m_Mode != RuntimeDebugViewBindingMode.Pinned)
-                    m_SelectedInstance = default;
-                return m_Resolution;
-            }
-
             if (m_BoundCharacterRuntimeId != view.Target.CharacterRuntimeId)
             {
                 m_BoundCharacterRuntimeId = view.Target.CharacterRuntimeId;

@@ -33,7 +33,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             m_Visited.Clear();
             m_VisitedStateMachines.Clear();
             IReadOnlyList<BtsmtlSkillFlowGraph> roots = definition.AbilityGraphs;
-            foreach (BtsmtlSkillFlowGraph root in roots ?? Array.Empty<BtsmtlSkillFlowGraph>())
+            foreach (BtsmtlSkillFlowGraph root in roots)
                 Visit(root);
         }
 
@@ -41,8 +41,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (graph is not IBtsmtlSkillFlowGraph authoring || !m_Visited.Add(graph))
                 return;
-            if (Graphs.TryGetValue(authoring.AuthoringId, out FlowGraph existing) && existing != graph)
-                throw new InvalidOperationException($"Skill Graph identity重复：{authoring.AuthoringId}");
             Graphs.Add(authoring.AuthoringId, graph);
             foreach (FlowNode node in graph.allNodes.OfType<FlowNode>())
             {
@@ -66,9 +64,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (node is BtsmtlSkillTimelineFlowNode timeline && timeline.TimelineAsset)
                 {
                     string timelineId = timeline.Timeline.AuthoringId;
-                    if (Timelines.TryGetValue(timelineId, out TimelineAsset existingTimeline) &&
-                        existingTimeline != timeline.TimelineAsset)
-                        throw new InvalidOperationException($"Skill Timeline identity重复：{timelineId}");
                     Timelines[timelineId] = timeline.TimelineAsset;
                     foreach (Track track in timeline.Timeline.Tracks)
                     {
@@ -87,9 +82,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (machine == null || !m_VisitedStateMachines.Add(machine))
                 return;
-            if (StateMachines.TryGetValue(machine.AuthoringId, out BtsmtlSkillNativeStateMachine existing) &&
-                existing != machine)
-                throw new InvalidOperationException($"Skill StateMachine identity重复：{machine.AuthoringId}");
             StateMachines[machine.AuthoringId] = machine;
             foreach (BtsmtlSkillFlowGraph child in BtsmtlSkillNativeStateMachineContract.References(machine))
                 Visit(child);

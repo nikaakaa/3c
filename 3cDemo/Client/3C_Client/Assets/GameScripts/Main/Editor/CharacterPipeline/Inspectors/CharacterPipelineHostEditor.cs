@@ -120,12 +120,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 mode == CharacterRuntimeDiagnosticsInspectorMode.Complete);
             if (session.AttachmentState == RuntimeDebugAttachmentState.Ended)
                 EditorGUILayout.HelpBox("Target ended. The inspector is showing its final live state or the active capture.", MessageType.Info);
-            if (!view.Valid)
-            {
-                EditorGUILayout.HelpBox(!string.IsNullOrEmpty(view.Error) ? view.Error : "Runtime diagnostics are unavailable.", MessageType.Error);
-                return;
-            }
-
             DrawFootPlacement(view);
             if (mode == CharacterRuntimeDiagnosticsInspectorMode.FootPlacement)
                 return;

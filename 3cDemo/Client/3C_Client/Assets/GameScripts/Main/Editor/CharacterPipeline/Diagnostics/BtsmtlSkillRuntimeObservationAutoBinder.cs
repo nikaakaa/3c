@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static double s_NextResolveTime;
         static FlowGraph s_Graph;
         static RuntimeDebugTargetRequest s_Request;
-        static readonly BtsmtlRuntimeFocusResolver s_Focus = new BtsmtlRuntimeFocusResolver();
+        static readonly BtsmtlRuntimeFocusResolver s_Focus = BtsmtlRuntimeFocusResolver.Shared;
         static readonly List<RuntimeInstanceKey> s_Instances = new List<RuntimeInstanceKey>();
 
         static BtsmtlSkillRuntimeObservationAutoBinder()
@@ -100,9 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 ReleaseInterest();
                 s_Graph = graph;
-                s_Request = new RuntimeDebugTargetRequest(
-                    RuntimeSourceElementKey.Graph(authoring.AuthoringId),
-                    new BtsmtlSkillGraphFingerprint().Compute(graph));
+                s_Request = new RuntimeDebugTargetRequest(RuntimeSourceElementKey.Graph(authoring.AuthoringId));
             }
 
             double now = EditorApplication.timeSinceStartup;
@@ -114,7 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_NextResolveTime = now + 0.1d;
 
             IGraphEditorObservation currentObservation = GraphEditor.currentGraph?.editorObservation;
-            if (!s_Request.IsValid || currentObservation != null &&
+            if (currentObservation != null &&
                 currentObservation is not BtsmtlSkillFlowObservation)
             {
                 ReleaseInterest();
@@ -123,7 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             RuntimeDebugSession session = RuntimeDebugSession.Shared;
             RuntimeDebugTargetResolution resolution = session.ResolveTarget(s_Request);
-            if (!resolution.CanReadSnapshot || !session.ViewModel.Valid)
+            if (!resolution.CanReadSnapshot)
             {
                 ReleaseInterest();
                 return;

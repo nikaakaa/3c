@@ -11,4 +11,4 @@
 
 正式采集、报告读取和比较口径由[性能采集工具](../../../Tools/ThirdPersonPerformanceCapture/README.md)拥有。Player、manifest、原始 Capture 与失败 Gates 仍由项目 `Library/Performance/` 保存，具体身份从对应报告读取；本次没有移动这些产物或重新采集。
 
-2026-10-01 Editor 桥接优化保留 RuntimeDebug 自动开启以及具体来源跟随：导航复用正式作者闭包索引和同版本指纹，Live State 使用预分配槽位及直接定位增量的环形数组，观察变更集合复用当前更新存储，图实例查询直接读图级索引，节点与连线复用当前图/实例的事件列表。没有删除 Capture 事件或改变角色输出。`ThirdPersonClient.Editor.csproj` 最终静态编译为 0 个错误、90 个警告；尚未启动 Play 或新采集，不能据此宣称 FPS/0 GC 收益。历史 Editor 导航热点、完整调用链、剩余项和检查日志见[性能运行期分配清理](../../路径/性能运行期分配清理.md)；PoseGraph Evaluate 仍是旧 Player 采样中最大的业务 CPU 热点。
+2026-10-01 Editor 桥接优化保留 RuntimeDebug 自动开启以及具体来源跟随。当前观察事件按容量预分配槽位，Graph 与 Timeline 用实例槽位链查询，删除 playback 嵌套事件字典；全量同步复用已有集合，两个导航消费者共享同 Revision 的焦点结果。按用户要求删除桥接作者指纹、版本比对、来源复核和重复选择校验，直接依赖正式来源标识。Capture 事件和角色输出仍走原路径。此前桥接提交的静态编译为 0 个错误、90 个警告，当前追加改动的验证结果记录在[性能运行期分配清理](../../路径/性能运行期分配清理.md)；静态修改不证明 FPS/0 GC 收益，PoseGraph Evaluate 仍是旧 Player 采样中最大的业务 CPU 热点。

@@ -71,7 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             readonly object m_InterestOwner = new object();
             readonly List<Controls> m_Controls = new List<Controls>();
-            readonly BtsmtlRuntimeFocusResolver m_RuntimeFocus = new();
+            readonly BtsmtlRuntimeFocusResolver m_RuntimeFocus = BtsmtlRuntimeFocusResolver.Shared;
             TimelineWorkspaceMode Mode => BtsmtlScenePlayPreviewWindow.IsOpen
                 ? TimelineWorkspaceMode.Preview : TimelineWorkspaceMode.Authoring;
             BtsmtlScenePlayProfile m_Profile;
@@ -452,11 +452,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         label,
                         _ =>
                         {
-                            if (window.SelectRuntimeObservationPlayback(playback, pin: true))
-                            {
-                                m_FollowRuntime = false;
-                                Refresh();
-                            }
+                            window.SelectRuntimeObservationPlayback(playback, pin: true);
+                            m_FollowRuntime = false;
+                            Refresh();
                         },
                         _ => window.RuntimeObservationPlayback.Equals(playback)
                             ? DropdownMenuAction.Status.Checked
@@ -555,12 +553,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 if (!view.Attached)
                 {
                     ResetNavigationFocus();
-                    return;
-                }
-                if (!view.Valid)
-                {
-                    ResetNavigationFocus();
-                    PublishNavigationStatus(view.Error);
                     return;
                 }
                 if (view.HasCoverageGap)

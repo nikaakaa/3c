@@ -7,6 +7,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     sealed class BtsmtlRuntimeFocusResolver
     {
+        public static BtsmtlRuntimeFocusResolver Shared { get; } = new();
+
         readonly List<RuntimeDebugEventView> m_Events = new();
         readonly Dictionary<(RuntimeInstanceKey, RuntimeSourceElementKey), RuntimeDebugEventView> m_Nodes = new();
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_Graphs = new();
@@ -15,12 +17,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_CompletedTimelines = new();
         readonly Dictionary<RuntimeInstanceKey, ulong> m_DestroyedGraphs = new();
         readonly List<RuntimeDebugEventView> m_Candidates = new();
+        RuntimeDebugViewModel m_View;
+        long m_Revision;
+
+        BtsmtlRuntimeFocusResolver() { }
 
         public IReadOnlyList<RuntimeDebugEventView> Candidates => m_Candidates;
         public int ActiveCandidateCount { get; private set; }
 
         public void Refresh(RuntimeDebugViewModel view)
         {
+            if (ReferenceEquals(m_View, view) && m_Revision == view.Revision)
+                return;
+            m_View = view;
+            m_Revision = view.Revision;
             m_Candidates.Clear();
             m_Nodes.Clear();
             m_Graphs.Clear();
@@ -29,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_CompletedTimelines.Clear();
             m_DestroyedGraphs.Clear();
             ActiveCandidateCount = 0;
-            if (!view.Valid || view.HasCoverageGap)
+            if (!view.Attached || view.HasCoverageGap)
                 return;
             view.CopyCurrentEvents(RuntimeTraceChannel.Graph | RuntimeTraceChannel.Timeline, m_Events);
             for (int i = 0; i < m_Events.Count; i++)

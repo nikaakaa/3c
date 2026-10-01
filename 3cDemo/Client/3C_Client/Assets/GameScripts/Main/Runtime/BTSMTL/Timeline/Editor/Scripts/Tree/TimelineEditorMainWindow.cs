@@ -176,7 +176,7 @@ namespace BTSMTL.Timeline.Editor
                 int activeCount = 0;
                 for (int index = 0; index < summaries.Count; index++)
                 {
-                    if (summaries[index].IsTerminal || !summaries[index].Playback.IsValid)
+                    if (summaries[index].IsTerminal)
                         continue;
                     activePlayback = summaries[index].Playback;
                     activeCount++;
@@ -201,7 +201,7 @@ namespace BTSMTL.Timeline.Editor
                 message = "已选择的运行 Timeline 实例不在当前调用路径中。";
                 return false;
             }
-            if (summaries.Count == 1 && summaries[0].Playback.IsValid)
+            if (summaries.Count == 1)
             {
                 summary = summaries[0];
                 message = string.Empty;
@@ -228,30 +228,16 @@ namespace BTSMTL.Timeline.Editor
             ClearRuntimeTimelineObservation();
         }
 
-        public bool SelectRuntimeObservationPlayback(RuntimeInstanceKey playback, bool pin = false)
+        public void SelectRuntimeObservationPlayback(RuntimeInstanceKey playback, bool pin = false)
         {
-            if (playback.Kind != RuntimeInstanceKind.TimelinePlayback)
-                return false;
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
-            for (int index = 0; index < summaries.Count; index++)
+            if (m_RuntimeObservationPlayback.Equals(playback))
             {
-                if (!summaries[index].Playback.Equals(playback))
-                    continue;
-                if (m_RuntimeObservationPlayback.Equals(playback))
-                {
-                    m_RuntimeObservationPinned = pin;
-                    return true;
-                }
-                m_RuntimeObservationPlayback = playback;
                 m_RuntimeObservationPinned = pin;
-                ClearRuntimeTimelineObservation();
-                return true;
+                return;
             }
             m_RuntimeObservationPlayback = playback;
             m_RuntimeObservationPinned = pin;
             ClearRuntimeTimelineObservation();
-            SetRuntimeObservationStatus("当前 Timeline 播放实例与作者来源不一致。");
-            return false;
         }
 
         internal void ClearRuntimeObservationSelection()
@@ -275,15 +261,8 @@ namespace BTSMTL.Timeline.Editor
             if (!m_RuntimeObservationScope.IsValid)
                 return true;
             RuntimeTimelinePlaybackProvenance provenance = summary.Provenance;
-            if (!provenance.IsValid)
-                return false;
             if (m_RuntimeObservationScope.Kind == RuntimeInstanceKind.SkillExecution)
-                return provenance.HasProgramInvocation &&
-                       !string.IsNullOrEmpty(m_RuntimeObservationScope.CallSiteId) &&
-                       m_RuntimeObservationScope.ActionInstanceId != 0 &&
-                       m_RuntimeObservationScope.ActivationGeneration != 0 &&
-                       m_RuntimeObservationScope.InvocationGeneration != 0 &&
-                       summary.Playback.ActionInstanceId == m_RuntimeObservationScope.ActionInstanceId &&
+                return summary.Playback.ActionInstanceId == m_RuntimeObservationScope.ActionInstanceId &&
                        provenance.SkillExecutionGeneration == m_RuntimeObservationScope.ActivationGeneration &&
                        provenance.SourceActivationGeneration == m_RuntimeObservationScope.InvocationGeneration &&
                        string.Equals(provenance.SourceInvocationPath,

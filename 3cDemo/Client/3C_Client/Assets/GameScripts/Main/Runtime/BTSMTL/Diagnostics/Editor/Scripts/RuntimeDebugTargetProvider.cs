@@ -18,12 +18,12 @@ namespace BTSMTL.Diagnostics.Editor
 
         public RuntimeDebugTargetProvider(RuntimeDiagnosticsTarget target)
         {
-            m_Target = target ?? throw new ArgumentNullException(nameof(target));
+            m_Target = target;
             m_LiveChanges = new List<RuntimeLiveStateChange>(target.Store.LiveStateCapacity);
             m_CaptureChanges = new List<RuntimeCaptureChange>(target.Store.CaptureEventCapacity);
             m_SourceMap = RuntimeDebugSourceMapSnapshot.Capture(target.SourceMap);
             m_LastChannels = target.Store.EffectiveChannels;
-            m_LiveModel = new RuntimeDebugViewModel(new RuntimeDebugTargetInfo(target), m_SourceMap, m_LastChannels);
+            m_LiveModel = new RuntimeDebugViewModel(new RuntimeDebugTargetInfo(target), m_SourceMap, m_LastChannels, target.Store.LiveStateCapacity);
         }
 
         public RuntimeDebugViewModel LiveModel => m_LiveModel;
@@ -49,7 +49,7 @@ namespace BTSMTL.Diagnostics.Editor
                 for (int i = 0; i < read.Changes.Count; i++)
                 {
                     RuntimeLiveStateChange change = read.Changes[i];
-                    m_LiveModel.Apply(change.Key, change.TraceEvent, sourceMaps[change.TraceEvent.ContentRevision], false);
+                    m_LiveModel.Apply(change.Key, change.TraceEvent, sourceMaps[change.TraceEvent.ContentRevision]);
                 }
             }
             m_LiveModel.SetChannels(channels);
@@ -143,10 +143,10 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugViewModel liveModel,
             RuntimeDebugSourceMapSnapshot sourceMap,
             RuntimeCaptureSnapshot activeCapture,
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps = null)
+            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
         {
-            m_LiveModel = liveModel ?? RuntimeDebugViewModel.Detached;
-            m_SourceMap = sourceMap ?? RuntimeDebugSourceMapSnapshot.Empty;
+            m_LiveModel = liveModel;
+            m_SourceMap = sourceMap;
             ActiveCapture = activeCapture;
             m_SourceMaps = sourceMaps;
         }
@@ -159,12 +159,9 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugTargetMatch current = m_SourceMap.Match(request);
             if (current == RuntimeDebugTargetMatch.Exact)
                 return current;
-            if (m_SourceMaps != null)
-            {
-                foreach (RuntimeDebugSourceMapSnapshot sourceMap in m_SourceMaps.Values)
-                    if (sourceMap.Match(request) == RuntimeDebugTargetMatch.Exact)
-                        return RuntimeDebugTargetMatch.Exact;
-            }
+            foreach (RuntimeDebugSourceMapSnapshot sourceMap in m_SourceMaps.Values)
+                if (sourceMap.Match(request) == RuntimeDebugTargetMatch.Exact)
+                    return RuntimeDebugTargetMatch.Exact;
             return current;
         }
 
@@ -173,20 +170,15 @@ namespace BTSMTL.Diagnostics.Editor
             if (snapshot == null)
                 return m_LiveModel;
 
-            var view = new RuntimeDebugViewModel(m_LiveModel.Target, m_SourceMap, snapshot.Channels);
+            ReadOnlySpan<RuntimeTraceEvent> events = snapshot.GetEvents(historyOffset, throughSequence);
+            var view = new RuntimeDebugViewModel(m_LiveModel.Target, m_SourceMap, snapshot.Channels, events.Length);
             view.BeginUpdate(true);
             view.SetCoverage(0, snapshot.EvictedEvents != 0);
-            ReadOnlySpan<RuntimeTraceEvent> events = snapshot.GetEvents(historyOffset, throughSequence);
             for (int i = 0; i < events.Length; i++)
             {
                 RuntimeTraceEvent traceEvent = events[i];
                 var key = new RuntimeLiveStateKey(traceEvent);
-                RuntimeDebugSourceMapSnapshot sourceMap;
-                if (m_SourceMaps == null ||
-                    !m_SourceMaps.TryGetValue(traceEvent.ContentRevision, out sourceMap) ||
-                    sourceMap == null)
-                    sourceMap = RuntimeDebugSourceMapSnapshot.Empty;
-                view.Apply(key, traceEvent, sourceMap, true);
+                view.Apply(key, traceEvent, m_SourceMaps[traceEvent.ContentRevision]);
             }
             view.CommitUpdate();
             return view;

@@ -58,16 +58,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         BtsmtlSkillFlowObservation(FlowGraph graph, RuntimeDebugSession session, RuntimeDebugTargetRequest request,
             RuntimeInstanceKey instance, Guid characterRuntimeId, Func<RuntimeDebugViewModel, RuntimeInstanceKey> select)
         {
-            if (graph is not IBtsmtlSkillFlowGraph authoring || !request.IsValid ||
-                !request.Source.Equals(RuntimeSourceElementKey.Graph(authoring.AuthoringId)))
-                throw new ArgumentException("技能观察必须使用当前正式图及其作者版本。");
-            if (!instance.IsValid && (select == null || characterRuntimeId == Guid.Empty))
-                throw new InvalidOperationException("技能观察必须绑定正式诊断中的明确执行实例。");
-            if (graph.editorObservation != null)
-                throw new InvalidOperationException("当前图已有观察绑定，请先释放原绑定。");
+            var authoring = (IBtsmtlSkillFlowGraph)graph;
             m_Graph = graph;
             m_GraphId = authoring.AuthoringId;
-            m_Session = session ?? throw new ArgumentNullException(nameof(session));
+            m_Session = session;
             m_CharacterRuntimeId = characterRuntimeId;
             m_SelectInstance = select;
             m_NodeIds = graph.allNodes.Select(node => node.UID).ToHashSet(StringComparer.Ordinal);
@@ -229,7 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 (m_CaptureValues ? RuntimeTraceChannel.Values : RuntimeTraceChannel.None));
             RuntimeDebugViewModel view = m_Session.ViewModel;
             m_CoverageGap = view.HasCoverageGap;
-            m_CanReadSnapshot = m_Binding.CanReadSelectedInstance && view.Valid;
+            m_CanReadSnapshot = m_Binding.CanReadSelectedInstance;
             if (!m_CanReadSnapshot)
             {
                 ClearConnectionPulses();

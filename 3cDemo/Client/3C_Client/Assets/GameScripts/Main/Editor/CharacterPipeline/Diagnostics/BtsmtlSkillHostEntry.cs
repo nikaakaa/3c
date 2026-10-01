@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             RuntimeDebugViewModel view = session.ViewModel;
             string graphId = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
-            if (!view.Valid || view.Target.CharacterRuntimeId != actor)
+            if (!view.Attached || view.Target.CharacterRuntimeId != actor)
             {
                 menu.AddDisabledItem(new GUIContent(prefix + "当前诊断目标与此角色不一致，请从Host重新选择"));
                 return;

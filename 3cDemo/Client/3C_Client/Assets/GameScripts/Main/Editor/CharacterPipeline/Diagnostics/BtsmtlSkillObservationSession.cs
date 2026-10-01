@@ -154,39 +154,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_CaptureValues = m_Observation?.CaptureValues ?? m_CaptureValues;
             m_Observation?.Dispose();
             m_Observation = null;
-            try
+            var graph = m_RootGraph;
+            Scope scope = m_RootScope;
+            while (graph.GetCurrentChildGraph() is FlowGraph child && child is IBtsmtlSkillFlowGraph childAuthoring)
             {
-                var graph = m_RootGraph;
-                Scope scope = m_RootScope;
-                while (graph.GetCurrentChildGraph() is FlowGraph child && child is IBtsmtlSkillFlowGraph childAuthoring)
-                {
-                    IGraphElement caller = graph.GetCurrentChildGraphSource();
-                    RuntimeSourceElementKind kind = caller is Connection ? RuntimeSourceElementKind.Edge : RuntimeSourceElementKind.Node;
-                    RuntimeGraphInvocation[] matches = m_Session.ViewModel.GetGraphInvocations(scope.Root).Where(value =>
-                        BtsmtlRuntimeInvocationPath.MatchesParent(m_Session.ViewModel, scope.Root,
-                            value.ParentPath, scope.Path) && value.GraphId == childAuthoring.AuthoringId &&
-                        value.Caller.Kind == kind && value.Caller.ElementAuthoringId == caller.UID &&
-                        string.IsNullOrEmpty(value.CallerClipId)).ToArray();
-                    if (matches.Length != 1)
-                        throw new InvalidOperationException("当前页面没有唯一的同版本运行调用路径。");
-                    scope = scope.Append(matches[0].Path);
-                    graph = child;
-                }
-                m_PageScope = scope;
-                m_PageGraphAuthoringId = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
-                RuntimeDebugTargetRequest request = RuntimeDebugSourceNavigator.CreateTargetRequest(m_Definition, graph);
-                m_Observation = BtsmtlSkillFlowObservation.ForScope(graph, m_Session, request, scope.Root.CharacterRuntimeId, scope.Resolve);
-                m_Observation.CaptureValues = m_CaptureValues;
-                m_Observation.SetParentNavigation(CanNavigateParent, NavigateParent, OnTimelineOpening);
-                m_Observation.SetInstanceSelection(() => BtsmtlSkillHostEntry.ShowInstances(
-                    m_Definition, graph, m_Session, scope.Root.CharacterRuntimeId, m_Observation.Instance));
-                UpdateTimelineOverlay();
+                IGraphElement caller = graph.GetCurrentChildGraphSource();
+                RuntimeSourceElementKind kind = caller is Connection ? RuntimeSourceElementKind.Edge : RuntimeSourceElementKind.Node;
+                RuntimeGraphInvocation invocation = m_Session.ViewModel.GetGraphInvocations(scope.Root).First(value =>
+                    BtsmtlRuntimeInvocationPath.MatchesParent(m_Session.ViewModel, scope.Root,
+                        value.ParentPath, scope.Path) && value.GraphId == childAuthoring.AuthoringId &&
+                    value.Caller.Kind == kind && value.Caller.ElementAuthoringId == caller.UID &&
+                    string.IsNullOrEmpty(value.CallerClipId));
+                scope = scope.Append(invocation.Path);
+                graph = child;
             }
-            catch (InvalidOperationException error)
-            {
-                ClearTimelineOverlay();
-                GraphEditor.current.ShowNotification(new GUIContent(error.Message));
-            }
+            m_PageScope = scope;
+            m_PageGraphAuthoringId = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
+            var request = new RuntimeDebugTargetRequest(RuntimeSourceElementKey.Graph(m_PageGraphAuthoringId));
+            m_Observation = BtsmtlSkillFlowObservation.ForScope(graph, m_Session, request, scope.Root.CharacterRuntimeId, scope.Resolve);
+            m_Observation.CaptureValues = m_CaptureValues;
+            m_Observation.SetParentNavigation(CanNavigateParent, NavigateParent, OnTimelineOpening);
+            m_Observation.SetInstanceSelection(() => BtsmtlSkillHostEntry.ShowInstances(
+                m_Definition, graph, m_Session, scope.Root.CharacterRuntimeId, m_Observation.Instance));
+            UpdateTimelineOverlay();
         }
 
         void UpdateTimelineOverlay()
@@ -260,11 +250,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             graph.SetCurrentChildGraphAssignable(null);
             GraphEditor.OpenWindow(graph);
             OpenScope(m_Definition, graph, m_Session, scope);
-            IGraphElement caller = invocation.Caller.Kind == RuntimeSourceElementKind.Edge
-                ? graph.allNodes.SelectMany(node => node.outConnections).SingleOrDefault(edge => edge.UID == invocation.Caller.ElementAuthoringId)
-                : graph.allNodes.SingleOrDefault(node => node.UID == invocation.Caller.ElementAuthoringId);
-            if (caller != null)
-                GraphEditor.FocusElement(caller, true);
+            IGraphElement caller = RuntimeDebugSourceNavigator.ResolveElement(m_Definition, invocation.Caller);
+            GraphEditor.FocusElement(caller, true);
             if (!string.IsNullOrEmpty(invocation.CallerClipId) && caller is BtsmtlSkillTimelineFlowNode timeline)
             {
                 var track = timeline.Timeline.Tracks.Single(value => value.Clips.Any(clip => clip.AuthoringId == invocation.CallerClipId));

@@ -106,7 +106,7 @@ namespace ThirdPersonCamera
                 pointer ? settings.PointerAxisGain : settings.StickAxisGain);
             m_YawAxis.Step(axisInput.x, delta, maxSpeed.x, settings.AccelerationTime.x,
                 settings.DecelerationTime.x, 0f, 360f, true);
-            m_ElevationAxis.Step(axisInput.y, delta, maxSpeed.y, settings.AccelerationTime.y,
+            m_ElevationAxis.Step(-axisInput.y, delta, maxSpeed.y, settings.AccelerationTime.y,
                 settings.DecelerationTime.y, settings.ElevationRange.x, settings.ElevationRange.y, false);
             if (m_DragPhase == CameraDragPhase.Exiting)
             {

@@ -114,6 +114,28 @@
       </div>
     </div>
   </section>
+  <section class="first-work" id="rear-step-handoff" aria-labelledby="rear-step-handoff-title">
+    <div class="eyebrow">后脚从平地跨上台阶 · 本轮历史核对</div>
+    <h2 id="rear-step-handoff-title">先修跨面过程：脚还在低面，不能突然被高面顶起来</h2>
+    <p class="first-work-lead">你补充的后脚跳动属于第一项。旧录制已证实一类原因：<b>脚尖先跨到高踏面，高度不够，最后的防穿才把整只脚一次抬高约 13 cm。</b>这条高度修正链确实有问题。但“后脚上移”也可能在更前面的姿态或重新接入阶段发生，必须按同一段录制分清。</p>
+    <div class="first-work-flow">
+      <article><span>旧支撑</span><h3>后脚仍在低面</h3><p>身体和前脚已经上台阶，后脚当前接触仍由低面负责。下一步的高面不能提前取得它的高度控制权。</p></article>
+      <article><span>跨边之前</span><h3>安排整脚的移动</h3><p>看脚尖、脚跟及旋转后覆盖的位置。高度、水平位移与旋转需要共同推进，不能等脚端跨进去才发现高度不够。</p></article>
+      <article><span>新支撑</span><h3>承接实际完成的位置</h3><p>新接触沿既有入口接管。不能把冻结积累的偏差重新塞给新接触，也不能在解冻那一帧一次追完。</p></article>
+      <article><span>同一输出</span><h3>净空与腿长一起检查</h3><p>经过真实双脚骨盆后，脚目标还必须够得着。最后防穿补高、伸直限制与历史回写不能互相推翻。</p></article>
+    </div>
+    <details open><summary>为什么不能再用一个“高度平滑”处理所有跳动</summary><div class="detail-body">
+      <div class="audit-scroll"><table class="audit-table"><thead><tr><th>看起来相似的现象</th><th>录制证明了什么</th><th>本次判断</th></tr></thead><tbody>
+        <tr><td>当前脚被下一步高面抬走</td><td>c75d 4452 的包络越权已经由 <code>f37f8b4df</code> 修过，当前正式分支仍保留。</td><td>先确认是否走到同一分支，不能把已保留修复再做一遍。</td></tr>
+        <tr><td>脚尖实际跨面后突然补高</td><td>c28 3858 末端追加 12.95 cm，真实踝上移 13.27 cm。</td><td>跨边准备不足；已有目标脚掌查询仍不足以保证响应过程安全。</td></tr>
+        <tr><td>新包后脚上移，末端补高为 0</td><td>表现帧 3790：输入原踝已上移 3.63 cm，响应修正再增加 0.61 cm，真实踝上移 4.24 cm。</td><td>该帧变化已在前级发生；不能只凭 OutputFootprint 标签认定末端硬抬。</td></tr>
+        <tr><td>重新着地时约 20 cm 接入</td><td>新包 3194、3470：旧历史已清空，Grounded 恢复，新目标按满输出权重接入。</td><td>这是新目标初始化／重新接入，不能误说成旧残差又带回来。</td></tr>
+      </tbody></table></div>
+      <p>新包帧号采用表现 <code>FrameSequence</code>，不是 Completion 或 CSV 行号。这里只核对已有录制，没有证明上述某一帧就是你最新看到的那一下；<a href="README.md#后脚换面核对2026-10-01">字段、完整数值与源文件身份</a>均已记录。</p>
+    </div></details>
+    <p class="first-work-next"><b>下一笔落点：</b>现有 <code>ResolveContactClearance</code> 的跨边推进与接触历史交接。目标脚掌查询、末端防穿和历史回写已经存在；要改的是它们怎样共同决定本帧脚位。<b>联合推进机制尚未实现，这页没有把历史核对说成运行修复。</b></p>
+    <p class="source"><a href="../../reference/foot-placement/implementation-lessons.md">经验文档</a>现已在顶部列出三项问题的保留修复、失败路线和实施边界，并补入第 80～82 条；旧架构的“下一 owner”已明确改为历史，避免继续照旧待办实验。</p>
+  </section>
   <section class="first-work" id="offline-comparison" aria-labelledby="offline-comparison-title">
     <div class="eyebrow">2026.10.01 · 本轮离线结果</div>
     <h2 id="offline-comparison-title">只换接触起点不够，这版候选先淘汰</h2>
@@ -152,8 +174,8 @@
   </section>
   <section class="first-work" id="first-work" aria-labelledby="first-work-title">
     <div class="eyebrow">第一轮具体做什么</div>
-    <h2 id="first-work-title">先做完整接触交接：旧脚怎么松开，新脚怎么接上</h2>
-    <p class="first-work-lead"><b>固定修复顺序：动画输入对齐 → 接触目标与历史交接 → 跨边与可达性共同推进 → 最终骨骼输出。</b>输入核对是前置工作，第一笔目标层业务修改仍是旧接触退出、新接触接入与一致回写。先用已有录制离线筛选；合格候选再做完整连续对照和真正 Replay。</p>
+    <h2 id="first-work-title">先把后脚跨面、旧接触退出和新接触接入做成一笔完整修改</h2>
+    <p class="first-work-lead"><b>固定依赖顺序：动画输入核对 → 接触目标与历史 → 跨边与腿长共同收口 → 完整动画过渡和最终骨骼。</b>眼前第一笔处理后脚跨台阶。前面的离线反例已否决只换接触起点；跨边推进和历史交接必须在同一笔里处理。合格候选再做完整连续对照和真正 Replay。</p>
     <details open><summary>当前控制链：每层控制什么，输出交给谁</summary><div class="detail-body">
       <div class="audit-scroll"><table class="audit-table"><thead><tr><th>正式阶段</th><th>控制权与输入</th><th>输出与下一层</th></tr></thead><tbody>
         <tr><td>Simulation / KCC → Body Presentation</td><td>游戏输入与技能运动驱动正式模拟；KCC 处理身体碰撞，表现层读取已提交身体状态。</td><td>提供身体位置、速度、grounded 和身体轨迹。FootPlacement 不回写游戏身体，也不决定角色能否跨上台阶。</td></tr>
@@ -168,7 +190,7 @@
     <div class="first-work-example"><b>用这段已知失败检查第一笔：</b>新包左脚 2775 已进入释放，2788 新接触又继承约 <strong>40 cm</strong> 水平偏差，2806 达到 <strong>70.72 cm</strong>，2807 追赶 <strong>13.82 cm</strong>。2788 的目标距离只有腿长的 81.94%，所以单独限制腿长不会消掉这次黏脚。</div>
     <div class="first-work-flow">
       <article><span>01 · 第三项的输入前置</span><h3>对齐姿态与脚步输入</h3><p>复用旧 2023 种子及 2024～2056 完整过渡窗口，核对骨骼贡献、左右脚信号、接触事件和动作时间。确认错配的输入先纠正；已有来源修正保留，源码疑点不直接当作已证实根因。</p></article>
-      <article><span>02 · 第一笔业务修改</span><h3>目标与历史一起接续</h3><p>定义 FullAnchor、Sliding、Releasing 的目标和参考更新规则。旧接触连续退出，新接触不反复接管已积累的滞后；最终约束后的修正由原历史入口一致保存。</p></article>
+      <article><span>02 · 第一笔业务修改</span><h3>后脚跨面与接触一起推进</h3><p>沿现有净空入口处理脚掌平移、旋转和高度；旧接触连续退出，新接触承接实际完成结果。受限后的水平差不能在解冻时一次追回，最终修正仍由原历史入口保存。</p></article>
       <article><span>03 · 第一、二项共同收口</span><h3>跨边与腿长一起满足</h3><p>在同一次脚目标推进中处理整脚平移、旋转、真实碰撞及骨盆后的腿长余量。接触期和 Swing 都检查；不能让防穿与可达限制在末尾互相覆盖。具体联合推进规则尚待实现验证。</p></article>
       <article><span>04 · 三项的完整输出</span><h3>检查动画串与最终骨骼</h3><p>覆盖 Locomotion 内部切换、攻击／技能进入退出、打断与 Stored。逐步对照双脚、骨盆、跳变、额外伸直和穿透，最后核对 FBBIK 输出。每笔完整改动通过后即可实测。</p></article>
     </div>

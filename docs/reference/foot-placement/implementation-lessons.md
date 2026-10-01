@@ -2,12 +2,26 @@
 
 本文只保留会改变正式架构、否决方案或决定下一步的结论。历史编号永久保留，但不记录逐轮流水账。
 
-当前三项问题的历史入口：接触交接与净空先读第 76、78、79 条；腿长与骨盆先读第 73、74 条；动画混合先读第 73、77 条。第 38 条的动画相对修正只适用于其记录的 Swing／Plan 交接，不能据此恢复已否决的 Contact／Locked 相对修正。失败、未获得有效运行、已经保留的修复必须分别读取，不能一概称为“撤回过”。
+当前三项问题的历史入口：后脚跨台阶、换面及净空先读第 76、78～82 条；腿长与骨盆先读第 73、74 条；动画混合先读第 73、77 条。第 38 条的动画相对修正只适用于其记录的 Swing／Plan 交接，不能据此恢复已否决的 Contact／Locked 相对修正。失败、未获得有效运行、已经保留的修复必须分别读取，不能一概称为“撤回过”。
+
+## 当前三项问题的执行依据（2026-10-01）
+
+用户补充的“从平地走上台阶时后脚明显跳一下”属于第一项换面连续性，不能另开成第四项任务，也不能直接认定每次都由同一种高度修正产生。先核对进入 FootPlacement 的原脚姿态、选中支撑、响应后目标、末端补高及最终骨骼，定位最早变化的一层。
+
+| 问题 | 当前应保留的处理 | 后续修改不能重复的失败 | 下一笔的责任边界 |
+| --- | --- | --- | --- |
+| 台阶边缘、后脚换面跳变 | `f37f8b4df` 的当前接触／下一步包络所有权；`1c979c9dd` 的 Landing Sliding 与插值前目标脚掌支撑；`75c0a1446` 的包络终点取样；单端支撑与最终输出防穿 | 清空 Contact 残差；直接删除水平冻结；只因插值脚掌有向下净空就提前放行；把当前问题再当作“尚未查询目标脚掌” | `StateTarget → Interpolation → ResolveContactClearance → OutputSupport → ApplyOutputCorrection`，处理整脚跨边推进及原历史承接；脚掌平移、旋转和高度须一起核对 |
+| 腿过度伸直 | 正式双脚请求、主支撑、骨盆弹簧及 FinalIK 部分权重补偿 | 恢复已撤回骨盆硬夹取；单独平滑膝角；只改善一脚；只比较固定某帧、不比较实际恢复事件 | 同一脚目标经实际双脚骨盆后检查可达性，再核对最终骨骼；边缘修复不能以新增超长、离地或穿透换取平滑 |
+| Locomotion／攻击／技能／Stored 过渡 | 已保留的 Stored 捕获语义及 Action 实际贡献修正 | 单独加权 FootHeight；单独平滑旋转；把缩小触发范围的动画相对接触修正当新机制 | 先核对姿态与脚步来源，再处理事件、接触与权重的进入／退出；原作者权重、实际输出权重和历史有效性分开读 |
+
+依赖顺序仍为“动画输入核对 → 接触目标与历史 → 跨边与腿长共同收口 → 完整动画过渡及最终骨骼”。当前第一笔针对后脚跨面；目标交接、净空推进和历史回写属于同一笔业务，不能再拆成只替换接触起点的候选。完整推进机制尚未实现，已有录制离线筛选通过后才进入连续业务对照和用户 Replay。
+
+历史编号记录当时的架构和证据。早期 `Active/Revision/Successor` 的待办不能直接当作当前 Lifecycle 的实施清单；文末旧阶段证据保留追溯，不再冠以“当前下一 owner”。
 
 ## 不变量
 
-- 唯一链：`Original Component Pose + Step/Body/World Facts -> CharacterFootPlacementRuntime单帧事务 -> 一个Foot Placement Final Goal Set -> 一次FinalIK FBBIK`。
-- 每只脚只有一个`CharacterFootExecutionState`；Current Support、Predictive Plan、Query和Pelvis只返回事实或提案，不拥有第二份脚生命周期。
+- 唯一链：`原动画姿态 + 正式脚步/Body/World事实 -> CharacterFootPlacementModule -> 双脚Lifecycle -> PrimarySupport/Pelvis/Completion -> 一个GoalSet -> 一次FinalIK FBBIK`。
+- 每只脚的生命周期由现有帧 Bank 内的 `CharacterFootLifecycleContext` 持有；Current Support、Ground Path、Query 和 Pelvis 不拥有第二份脚生命周期，完成与丢弃沿原提交边界执行。
 - Ground Envelope只提供feet-only安全下界；最终Swing保留动画XZ与动画净空。
 - Plan、Revision、Landing、Anchor、Pelvis都必须有唯一owner；Rejected不得由响应式Swing伪装成功。
 - FBBIK只执行最终Goal。Goal先跳而solver residual很小时，首因不在FBBIK。
@@ -102,7 +116,13 @@
 
 79. “当前脚掌已有净空，水平却仍被冻结”已是历史事实，重新在另一采样包里发现只能补充覆盖。`840bbd6b9` 已通过真实函数和新 Physics 查询确认 12574 的插值脚掌有向下净空，冻结却将腿长需求从约 96.810% 推到 115.625%。随后按插值脚掌查询提前放行的候选由 `4cdfc02ef` 记录并否决：冻结从 3 帧减至 2 帧、最大腿长需求降至 101.498%，实际解除冻结的水平步长却由 20.162 cm 增至 26.435 cm；只看原来的 12575 会漏掉提前到 12574 的跳变。直接删除冻结还会恢复旧版 6.456 cm 的末端硬抬。另一个 `8e4ed3d98` 的 Contact 硬交接直接跳过残差捕获，已由 `1b9655c7c` 因 1916 右脚 83.7642 cm 跳变、近乎拉直和新增 7 个穿透事件撤回。后续不能原样重试提前放行、删除冻结或清零残差；必须改变导致恢复跳步的实际推进机制，并保留恢复事件、整窗极值及跨边硬抬反例。既有[连续对照与否决结果](../../diagnostics/foot-placement/ik-tests/README.md#被否决的净空放行候选)拥有原始证据；单点向下净空不证明整脚水平运动安全。
 
-## 当前证据与下一owner
+80. 后脚跨面跳高必须区分“错误的下一步下界”与“实际跨面后迟到的支撑需求”。c75d 4452 的当前脚仍在低踏面却被下一步包络抬高，已经由 `f37f8b4df` 的 `selectedTarget.Kind == SwingGround` 控制权修复；c75d 3175→3176、c28 3857→3858 则是最终待输出 Toe 跨到高踏面后，`OutputFootprint` 才追加高度。`1c979c9dd` 已实现目标脚掌查询，不能重新以“把防穿放到插值前”为新方案。目标姿态与响应后姿态经过的面仍可能不同，旋转也能让脚尖先跨边；只核对脚底中心、只平滑高度或忽略高踏面都不能闭合。65ec 还证明不可达时最终 Toe 与查询姿态会落在不同踏面。原始证据与当前入口见[后脚换面核对](../../diagnostics/foot-placement/README.md#后脚换面核对2026-10-01)。
+
+81. `SafetyFloorOwner=OutputFootprint` 只表示当前选中的最低高度约束，不能单独证明该帧实际补高。4beb 包表现帧 3789→3790 右后脚中，末端追加为 0；上移已来自进入 FootPlacement 的原脚姿态与 Releasing 响应。必须读 clamp、响应前后及最终物理踝的增量。`foot-motion/core/original-ankle`、`original-sole` 与 `leg-pose/original-ankle` 的阶段和坐标不同，不能把脚底高度差叫踝高度差，或混入骨盆后的数据。该帧只作为归因反例，不冒充已定位用户最新肉眼现象。
+
+82. 输出权重从 0 恢复不等于旧残差重入。4beb 的 3194、3470 右脚在前一帧 `Grounded=false`，作者权重一直为 1；恢复时前态 `HasOutput=false`、`HasPreviousResponseOutputPoint=false`、旧有效修正为 0。重新着地后新 Swing 目标按满输出权重接入，形成约 20 cm 的脚位变化。它与 2dad 中确实保留异常高度历史的证据不同，不能重复清历史来处理，也不能借作者权重淡入解释。此处首次异常发生在新目标响应初始化／输出重新接入，完整解决仍须核对新目标和地形，而非先恢复过期历史。帧号统一采用 `FrameSequence`；`CompletionIdentity`、CSV `sample.sequence` 分列，禁止按相近数字混用。
+
+## 旧架构阶段证据（历史，不作本轮实施清单）
 
 - 首轮换代修复后的run `ea0e2e2...`共2021行、1221列且逐行等宽；左右Swing无Executable Path从`547/549`降到`85/8`，同一Executing Plan的单帧`rewritten=false`降为0。
 - 同一run左脚frame `197 -> 198`在Anchor开始接管时，预测Fade仍覆盖Baseline，单帧产生`55.54cm`物理下陷；Fade必须使用Predictive Output与Anchor的互补权重，开始帧不得先推进Render Delta。

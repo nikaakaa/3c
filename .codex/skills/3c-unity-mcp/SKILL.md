@@ -23,9 +23,15 @@ description: 操作 3C 项目的 Unity Editor、执行正式构建或恢复 Unit
 - 当前普通资产文件若仍包含旧 Git LFS 指针，先按指针的 SHA-256 与 size 确认本地原对象。被 `.gitignore` 排除、未进入 Git 索引的文件不会由 `git lfs checkout` 恢复；本地对象完整时使用 `git lfs smudge` 读取原内容，完整输出并核对身份后替换指针文件，保留 `.meta`，再在目标 Editor 批量导入和验证引用。这是旧文件恢复，不改变当前仓库的资产管理规则。
 - 技能运行数据契约变化后，使用正式技能发布器重建目标 Definition 的 Fixed / Float32 产物；不在 Runtime 猜测旧声明绑定或补默认值。技能重建菜单只负责指定 Definition 和输出目录，技能输入由 GameplayAbilityExecutionDataAssetPublisher 与编译器确认，不把独立的 Pose、动画资源或相机配置校验放到这条 Build 链之前。
 - `Tools/3C/Internal/Republish Corin Ability Data` 复用同一发布器。菜单返回 attempted 或客户端超时都不代表成功或失败；先检查原操作是否已写入产物，再用 Definition 的正式 Load 及技能安装入口确认契约，不能重复发起重建。
-- 回放、Foot 与 Presentation 诊断使用 [3C 同输入回放验证](../3c-replay-verified-change/SKILL.md)；CPU 与托管分配采集使用 [3C 性能诊断](../3c-performance-diagnostics/SKILL.md)。它们提供业务操作入口，连接机制仍由通用 skill 维护。
+- 回放、Foot 与 Presentation 诊断使用 [3C 同输入回放验证](../3c-replay-verified-change/SKILL.md)；Windows IL2CPP Player 的 CPU 与托管分配采集使用 [3C 性能诊断](../3c-performance-diagnostics/SKILL.md)。Editor 性能按下节直接读取当前 Editor Profiler；连接机制仍由通用 skill 维护。
 - 构建、回放或采集请求结果不确定时，先查询原 `job_id`/RunId，不重复提交。若当前操作由 3C Development Center 的独立 RunHost 管理，使用它的正式 `status` 命令查询，不依赖 Editor 重连，不改写状态文件。
 - [3C 并行开发验证](../3c-fast-development-validation/SKILL.md) 仅用于已明确的并行开发；普通 Unity 操作不自动引入 Center 改动记录、新 worktree 或其他 Agent。
+
+## Editor Profiler
+
+- Editor Play、运行桥接和窗口绘制卡顿直接采目标 Editor 的 CPU 调用树。Player 构建与采样不包含这些 Editor 调用，不能代替 Editor 诊断。
+- 在 Unity 2022.3.62f2c1 已确认：开启 CPU area、`ProfilerDriver.profileEditor` 和 `Profiler.enabled` 后，`EditorLoop` 会包含编辑器子调用。`ProfilerDriver.GetRawFrameDataView(frame, thread)` 返回 `UnityEditor.Profiling.RawFrameDataView`。优先保持 Deep Profile 关闭；域重载或新采样覆盖旧帧前，使用 `ProfilerDriver.SaveProfile` 将原始帧保存到 Assets 外。
+- 记录同一帧对应的 Play、RuntimeDebug attachment、具体 Graph/Timeline 和执行状态。Detached 或无活跃技能、无具体 Graph 的帧不能证明桥接开启后或绘制中的性能；输入与窗口状态不同的数据不能作为性能 A/B。
 
 ## 连接验证记录的范围
 

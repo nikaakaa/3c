@@ -750,10 +750,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 for (int i = 0; i < hosts.Length; i++)
                 {
                     SimulationSessionCompositionDefinition composition = hosts[i].Composition;
-                    if (!composition ||
-                        PrefabUtility.GetCorrespondingObjectFromSource(
-                            PrefabUtility.GetOutermostPrefabInstanceRoot(hosts[i].gameObject)) != m_Profile.AssemblyPrefab ||
-                        !string.Equals(composition.SessionId, m_Profile.ContextId, StringComparison.Ordinal))
+                    if (!string.Equals(composition.SessionId, m_Profile.ContextId, StringComparison.Ordinal))
                         continue;
                     if (sessionHost != null)
                     {

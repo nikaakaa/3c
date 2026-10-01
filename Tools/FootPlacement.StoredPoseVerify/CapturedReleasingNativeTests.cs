@@ -24,7 +24,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public static class CapturedReleasingNativeTests
+    public static partial class CapturedReleasingNativeTests
     {
         const string AssetsRoot = "Assets/Configs/Character/Corin/Pipeline/Presentation/";
         const string ResourcePath = "Assets/AssetRaw/Product/Gameplay/ACL/c7a7c1e3f7e64d81b5a04a90cbeb8d4e/acl-4ce133684f97a8812d744f6ee151d91c9eb234ee67e7b9d26b4f03fc4065565f.asset";

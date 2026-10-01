@@ -1,0 +1,2060 @@
+{
+  "status": "observed-not-a-candidate",
+  "scope": "同一2023种子与33帧；组件脚底中点、实际每脚权重、每源作者基准；只记录事实，未判新方案通过",
+  "rootBonePolicy": "ExcludeSourceRoot",
+  "scalePolicy": "PreserveReferenceScale",
+  "calibrationRevision": "de1a059cc5ecfa12cada360b274e0f49029307186184c57ae5f2ea7582ae9e77",
+  "formula": "B_i=sourceSoleY-FootHeight_i；H=finalSoleY-Σ(w_i B_i)/Σw_i；组件Y不是已知地面",
+  "rows": [
+    {
+      "frame": 2023,
+      "preRoll": true,
+      "rootWorldPosition": [
+        12.7717781,
+        0.009998202,
+        -3.79379916
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.3813392,
+              "footHeight": 0.3806942,
+              "baselineY": 0.0006450000000000067
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006450000000000067,
+          "finalSoleY": 0.3813392,
+          "finalSoleMinusWeightedBaseline": 0.3806942,
+          "weightedFootHeight": 0.3806942,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.09807587,
+              "footHeight": 0.09751994,
+              "baselineY": 0.0005559299999999961
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0005559299999999961,
+          "finalSoleY": 0.09807587,
+          "finalSoleMinusWeightedBaseline": 0.09751994,
+          "weightedFootHeight": 0.09751994,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2024,
+      "preRoll": false,
+      "rootWorldPosition": [
+        12.6491117,
+        0.00999819,
+        -3.79431272
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.409526646,
+              "footHeight": 0.408867747,
+              "baselineY": 0.0006588989999999906
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006588989999999906,
+          "finalSoleY": 0.409526646,
+          "finalSoleMinusWeightedBaseline": 0.408867747,
+          "weightedFootHeight": 0.408867747,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0549350381,
+              "footHeight": 0.05440011,
+              "baselineY": 0.0005349280999999984
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0005349280999999984,
+          "finalSoleY": 0.0549350381,
+          "finalSoleMinusWeightedBaseline": 0.05440011,
+          "weightedFootHeight": 0.05440011,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2025,
+      "preRoll": false,
+      "rootWorldPosition": [
+        12.5264463,
+        0.009998179,
+        -3.79482627
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.4557058,
+              "footHeight": 0.455261141,
+              "baselineY": 0.0004446590000000139
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0004446590000000139,
+          "finalSoleY": 0.4557058,
+          "finalSoleMinusWeightedBaseline": 0.455261141,
+          "weightedFootHeight": 0.455261141,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.000480364542,
+              "footHeight": 0.0,
+              "baselineY": 0.000480364542
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.000480364542,
+          "finalSoleY": 0.000480364542,
+          "finalSoleMinusWeightedBaseline": 0.0,
+          "weightedFootHeight": 0.0,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2026,
+      "preRoll": false,
+      "rootWorldPosition": [
+        12.4037809,
+        0.009998166,
+        -3.79534
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.455891937,
+              "footHeight": 0.455269784,
+              "baselineY": 0.0006221530000000142
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006221530000000142,
+          "finalSoleY": 0.455891937,
+          "finalSoleMinusWeightedBaseline": 0.455269784,
+          "weightedFootHeight": 0.455269784,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.000478549628,
+              "footHeight": 8.735511e-06,
+              "baselineY": 0.000469814117
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.000469814117,
+          "finalSoleY": 0.000478531,
+          "finalSoleMinusWeightedBaseline": 8.716882999999971e-06,
+          "weightedFootHeight": 8.735511e-06,
+          "soleBlendDifference": -1.8628000000050875e-08
+        }
+      }
+    },
+    {
+      "frame": 2027,
+      "preRoll": false,
+      "rootWorldPosition": [
+        12.2811747,
+        0.009998155,
+        -3.799193
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.431662828,
+              "footHeight": 0.430918485,
+              "baselineY": 0.0007443429999999807
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0007443429999999807,
+          "finalSoleY": 0.431662828,
+          "finalSoleMinusWeightedBaseline": 0.430918485,
+          "weightedFootHeight": 0.430918485,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0020233707,
+              "footHeight": 0.001573479,
+              "baselineY": 0.0004498916999999998
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0004498916999999998,
+          "finalSoleY": 0.00202339655,
+          "finalSoleMinusWeightedBaseline": 0.0015735048500000004,
+          "weightedFootHeight": 0.001573479,
+          "soleBlendDifference": 2.5850000000358225e-08
+        }
+      }
+    },
+    {
+      "frame": 2028,
+      "preRoll": false,
+      "rootWorldPosition": [
+        12.1585684,
+        0.009998143,
+        -3.80304551
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.4183206,
+              "footHeight": 0.417866766,
+              "baselineY": 0.0004538339999999863
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0004538339999999863,
+          "finalSoleY": 0.4183206,
+          "finalSoleMinusWeightedBaseline": 0.417866766,
+          "weightedFootHeight": 0.417866766,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0002398747,
+              "footHeight": 1.9195606e-05,
+              "baselineY": 0.000220679094
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.000220679094,
+          "finalSoleY": 0.0002398747,
+          "finalSoleMinusWeightedBaseline": 1.9195606e-05,
+          "weightedFootHeight": 1.9195606e-05,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2029,
+      "preRoll": false,
+      "rootWorldPosition": [
+        12.0359621,
+        0.00999813,
+        -3.80689836
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.378585875,
+              "footHeight": 0.3780073,
+              "baselineY": 0.0005785750000000256
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0005785750000000256,
+          "finalSoleY": 0.378585875,
+          "finalSoleMinusWeightedBaseline": 0.3780073,
+          "weightedFootHeight": 0.3780073,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.00778428931,
+              "footHeight": 0.00732983369,
+              "baselineY": 0.00045445562000000043
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.00045445562000000043,
+          "finalSoleY": 0.00778428931,
+          "finalSoleMinusWeightedBaseline": 0.00732983369,
+          "weightedFootHeight": 0.00732983369,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2030,
+      "preRoll": false,
+      "rootWorldPosition": [
+        11.9134378,
+        0.009998117,
+        -3.8128047
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.3251176,
+              "footHeight": 0.324477226,
+              "baselineY": 0.0006403739999999991
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006403739999999991,
+          "finalSoleY": 0.3251176,
+          "finalSoleMinusWeightedBaseline": 0.324477226,
+          "weightedFootHeight": 0.324477226,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0110551436,
+              "footHeight": 0.0106268534,
+              "baselineY": 0.0004282901999999988
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0004282901999999988,
+          "finalSoleY": 0.0110551482,
+          "finalSoleMinusWeightedBaseline": 0.010626858000000001,
+          "weightedFootHeight": 0.0106268534,
+          "soleBlendDifference": 4.600000000701265e-09
+        }
+      }
+    },
+    {
+      "frame": 2031,
+      "preRoll": false,
+      "rootWorldPosition": [
+        11.7909136,
+        0.009998104,
+        -3.818711
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.2449334,
+              "footHeight": 0.2443206,
+              "baselineY": 0.0006127999999999967
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006127999999999967,
+          "finalSoleY": 0.2449334,
+          "finalSoleMinusWeightedBaseline": 0.2443206,
+          "weightedFootHeight": 0.2443206,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0157107189,
+              "footHeight": 0.015199475,
+              "baselineY": 0.0005112438999999996
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0005112438999999996,
+          "finalSoleY": 0.0157107562,
+          "finalSoleMinusWeightedBaseline": 0.015199512299999999,
+          "weightedFootHeight": 0.015199475,
+          "soleBlendDifference": 3.729999999840805e-08
+        }
+      }
+    },
+    {
+      "frame": 2032,
+      "preRoll": false,
+      "rootWorldPosition": [
+        11.6683893,
+        0.009998091,
+        -3.82461739
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.166743726,
+              "footHeight": 0.166133642,
+              "baselineY": 0.0006100840000000107
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006100840000000107,
+          "finalSoleY": 0.166743726,
+          "finalSoleMinusWeightedBaseline": 0.166133642,
+          "weightedFootHeight": 0.166133642,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0429116264,
+              "footHeight": 0.0425673164,
+              "baselineY": 0.00034431000000000045
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.00034431000000000045,
+          "finalSoleY": 0.0429116264,
+          "finalSoleMinusWeightedBaseline": 0.0425673164,
+          "weightedFootHeight": 0.0425673164,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2033,
+      "preRoll": false,
+      "rootWorldPosition": [
+        11.5459185,
+        0.00999807753,
+        -3.83155
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.118009284,
+              "footHeight": 0.117390141,
+              "baselineY": 0.0006191430000000026
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006191430000000026,
+          "finalSoleY": 0.118009306,
+          "finalSoleMinusWeightedBaseline": 0.11739016299999999,
+          "weightedFootHeight": 0.117390141,
+          "soleBlendDifference": 2.199999998842017e-08
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.09914222,
+              "footHeight": 0.09871408,
+              "baselineY": 0.0004281400000000074
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0004281400000000074,
+          "finalSoleY": 0.09914222,
+          "finalSoleMinusWeightedBaseline": 0.09871408,
+          "weightedFootHeight": 0.09871408,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2034,
+      "preRoll": false,
+      "rootWorldPosition": [
+        11.4234476,
+        0.009998064,
+        -3.83848238
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0812394544,
+              "footHeight": 0.0806275159,
+              "baselineY": 0.0006119384999999922
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0006119384999999922,
+          "finalSoleY": 0.0812394843,
+          "finalSoleMinusWeightedBaseline": 0.0806275458,
+          "weightedFootHeight": 0.0806275159,
+          "soleBlendDifference": 2.990000000369086e-08
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.160982832,
+              "footHeight": 0.1604768,
+              "baselineY": 0.0005060319999999896
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0005060319999999896,
+          "finalSoleY": 0.160982832,
+          "finalSoleMinusWeightedBaseline": 0.1604768,
+          "weightedFootHeight": 0.1604768,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2035,
+      "preRoll": false,
+      "rootWorldPosition": [
+        11.3009768,
+        0.009998049,
+        -3.84541488
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0560961366,
+              "footHeight": 0.0555321127,
+              "baselineY": 0.0005640239000000019
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0005640239000000019,
+          "finalSoleY": 0.0560961142,
+          "finalSoleMinusWeightedBaseline": 0.055532090299999996,
+          "weightedFootHeight": 0.0555321127,
+          "soleBlendDifference": -2.2400000000699638e-08
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.2216968,
+              "footHeight": 0.221265972,
+              "baselineY": 0.0004308279999999942
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0004308279999999942,
+          "finalSoleY": 0.2216968,
+          "finalSoleMinusWeightedBaseline": 0.221265972,
+          "weightedFootHeight": 0.221265972,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2036,
+      "preRoll": false,
+      "rootWorldPosition": [
+        11.1784945,
+        0.009998034,
+        -3.8523407
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.0459651463,
+              "footHeight": 0.0454093665,
+              "baselineY": 0.000555779800000003
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.000555779800000003,
+          "finalSoleY": 0.0459651873,
+          "finalSoleMinusWeightedBaseline": 0.0454094075,
+          "weightedFootHeight": 0.0454093665,
+          "soleBlendDifference": 4.099999999923609e-08
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 1.0,
+              "sourceSoleY": 0.2731714,
+              "footHeight": 0.2729153,
+              "baselineY": 0.00025609999999998134
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.00025609999999998134,
+          "finalSoleY": 0.2731714,
+          "finalSoleMinusWeightedBaseline": 0.2729153,
+          "weightedFootHeight": 0.2729153,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2037,
+      "preRoll": false,
+      "rootWorldPosition": [
+        10.9469347,
+        0.009997977,
+        -3.795418
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.9697085,
+              "sourceSoleY": 0.05735015,
+              "footHeight": 0.0565526262,
+              "baselineY": 0.0007975238000000051
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.0302914977,
+              "sourceSoleY": 0.135864273,
+              "footHeight": 0.136251643,
+              "baselineY": -0.000387369999999998
+            }
+          ],
+          "totalWeight": 0.9999999976999999,
+          "weightedBaselineY": 0.0007616315921000087,
+          "finalSoleY": 0.0381851569,
+          "finalSoleMinusWeightedBaseline": 0.037423525307899996,
+          "weightedFootHeight": 0.05896682878964213,
+          "soleBlendDifference": -0.02154330348174214
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.9697085,
+              "sourceSoleY": 0.305964947,
+              "footHeight": 0.3050912,
+              "baselineY": 0.0008737469999999803
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.0302914977,
+              "sourceSoleY": 0.147647709,
+              "footHeight": 0.0362972543,
+              "baselineY": 0.11135045469999999
+            }
+          ],
+          "totalWeight": 0.9999999976999999,
+          "weightedBaselineY": 0.0042202519448950645,
+          "finalSoleY": 0.291138023,
+          "finalSoleMinusWeightedBaseline": 0.28691777105510496,
+          "weightedFootHeight": 0.2969490287933275,
+          "soleBlendDifference": -0.01003125773822261
+        }
+      }
+    },
+    {
+      "frame": 2038,
+      "preRoll": false,
+      "rootWorldPosition": [
+        10.7143688,
+        0.009997923,
+        -3.737626
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.887876153,
+              "sourceSoleY": 0.07486206,
+              "footHeight": 0.07422521,
+              "baselineY": 0.0006368499999999944
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.112123847,
+              "sourceSoleY": 0.167377949,
+              "footHeight": 0.167690277,
+              "baselineY": -0.0003123280000000006
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0005304245111522289,
+          "finalSoleY": -0.00528214965,
+          "finalSoleMinusWeightedBaseline": -0.005812574161152229,
+          "weightedFootHeight": 0.08470487287215275,
+          "soleBlendDifference": -0.09051744703330498
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.887876153,
+              "sourceSoleY": 0.31983304,
+              "footHeight": 0.3193384,
+              "baselineY": 0.0004946399999999906
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.112123847,
+              "sourceSoleY": 0.008060191,
+              "footHeight": 1.11758709e-08,
+              "baselineY": 0.008060179824129099
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0013429174297130498,
+          "finalSoleY": 0.245635271,
+          "finalSoleMinusWeightedBaseline": 0.24429235357028695,
+          "weightedFootHeight": 0.28353295135025686,
+          "soleBlendDifference": -0.03924059777996991
+        }
+      }
+    },
+    {
+      "frame": 2039,
+      "preRoll": false,
+      "rootWorldPosition": [
+        10.4756193,
+        0.009997863,
+        -3.676556
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.768066347,
+              "sourceSoleY": 0.08556324,
+              "footHeight": 0.08501795,
+              "baselineY": 0.0005452900000000038
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.231933653,
+              "sourceSoleY": 0.202239841,
+              "footHeight": 0.2026868,
+              "baselineY": -0.0004469589999999968
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.00031515406474440667,
+          "finalSoleY": -0.07395451,
+          "finalSoleMinusWeightedBaseline": -0.0742696640647444,
+          "weightedFootHeight": 0.11230931622480905,
+          "soleBlendDifference": -0.18657898028955344
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.768066347,
+              "sourceSoleY": 0.3320129,
+              "footHeight": 0.331715971,
+              "baselineY": 0.00029692900000000133
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.231933653,
+              "sourceSoleY": -0.0153000262,
+              "footHeight": 0.0,
+              "baselineY": -0.0153000262
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0033205297952133444,
+          "finalSoleY": 0.134081274,
+          "finalSoleMinusWeightedBaseline": 0.13740180379521336,
+          "weightedFootHeight": 0.25477987408752795,
+          "soleBlendDifference": -0.11737807029231459
+        }
+      }
+    },
+    {
+      "frame": 2040,
+      "preRoll": false,
+      "rootWorldPosition": [
+        10.2424173,
+        0.009997804,
+        -3.61651325
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.6238426,
+              "sourceSoleY": 0.04934837,
+              "footHeight": 0.0487124175,
+              "baselineY": 0.0006359525000000019
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.3761574,
+              "sourceSoleY": 0.25959608,
+              "footHeight": 0.2599094,
+              "baselineY": -0.0003133200000000058
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.000278876624508499,
+          "finalSoleY": -0.112025738,
+          "finalSoleMinusWeightedBaseline": -0.1123046146245085,
+          "weightedFootHeight": 0.1281557253250455,
+          "soleBlendDifference": -0.24046033994955401
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.6238426,
+              "sourceSoleY": 0.3926357,
+              "footHeight": 0.3921449,
+              "baselineY": 0.0004907999999999579
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.3761574,
+              "sourceSoleY": 0.0110385157,
+              "footHeight": 0.00308011472,
+              "baselineY": 0.007958400979999999
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.003299793368874225,
+          "finalSoleY": 0.024869876,
+          "finalSoleMinusWeightedBaseline": 0.021570082631125774,
+          "weightedFootHeight": 0.24579530193751695,
+          "soleBlendDifference": -0.22422521930639117
+        }
+      }
+    },
+    {
+      "frame": 2041,
+      "preRoll": false,
+      "rootWorldPosition": [
+        10.0256414,
+        0.009997747,
+        -3.56120634
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.468768,
+              "sourceSoleY": 0.0006069585,
+              "footHeight": 4.09781933e-08,
+              "baselineY": 0.0006069175218067
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.531232,
+              "sourceSoleY": 0.305719435,
+              "footHeight": 0.305908769,
+              "baselineY": -0.00018933400000004097
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.00018392323337426138,
+          "finalSoleY": -0.0406781174,
+          "finalSoleMinusWeightedBaseline": -0.04086204063337426,
+          "weightedFootHeight": 0.16250854638267373,
+          "soleBlendDifference": -0.203370587016048
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.468768,
+              "sourceSoleY": 0.45797655,
+              "footHeight": 0.457684726,
+              "baselineY": 0.0002918239999999961
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.531232,
+              "sourceSoleY": 0.0312911533,
+              "footHeight": 0.0232933685,
+              "baselineY": 0.007997784799999998
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.004385476967705597,
+          "finalSoleY": -0.0734573,
+          "finalSoleMinusWeightedBaseline": -0.0778427769677056,
+          "weightedFootHeight": 0.22692213637256,
+          "soleBlendDifference": -0.30476491334026556
+        }
+      }
+    },
+    {
+      "frame": 2042,
+      "preRoll": false,
+      "rootWorldPosition": [
+        9.822999,
+        0.009997693,
+        -3.51000237
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.31640625,
+              "sourceSoleY": -0.00124254567,
+              "footHeight": 0.0,
+              "baselineY": -0.00124254567
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.68359375,
+              "sourceSoleY": 0.335950971,
+              "footHeight": 0.336548716,
+              "baselineY": -0.0005977450000000384
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0008017639619922138,
+          "finalSoleY": 0.1089807,
+          "finalSoleMinusWeightedBaseline": 0.10978246396199222,
+          "weightedFootHeight": 0.23006259882812502,
+          "soleBlendDifference": -0.1202801348661328
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.31640625,
+              "sourceSoleY": 0.4685792,
+              "footHeight": 0.4681188,
+              "baselineY": 0.00046039999999997194
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.68359375,
+              "sourceSoleY": 0.0048179226,
+              "footHeight": 1.3038516e-08,
+              "baselineY": 0.0048179095614839995
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.003439166301795694,
+          "finalSoleY": -0.06700043,
+          "finalSoleMinusWeightedBaseline": -0.07043959630179569,
+          "weightedFootHeight": 0.14811572297554804,
+          "soleBlendDifference": -0.21855531927734373
+        }
+      }
+    },
+    {
+      "frame": 2043,
+      "preRoll": false,
+      "rootWorldPosition": [
+        9.63147,
+        0.009997642,
+        -3.46374822
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.180320442,
+              "sourceSoleY": 0.0004979314,
+              "footHeight": 0.0,
+              "baselineY": 0.0004979314
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.819679558,
+              "sourceSoleY": 0.368653655,
+              "footHeight": 0.368922234,
+              "baselineY": -0.000268578999999991
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.00013036150587439585,
+          "finalSoleY": 0.252151072,
+          "finalSoleMinusWeightedBaseline": 0.2522814335058744,
+          "weightedFootHeight": 0.3023980137014926,
+          "soleBlendDifference": -0.050116580195618265
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.180320442,
+              "sourceSoleY": 0.4496562,
+              "footHeight": 0.449220449,
+              "baselineY": 0.00043575099999998423
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.819679558,
+              "sourceSoleY": 0.000466774916,
+              "footHeight": 0.0,
+              "baselineY": 0.000466774916
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0004611806697543063,
+          "finalSoleY": -0.0240226984,
+          "finalSoleMinusWeightedBaseline": -0.024483879069754307,
+          "weightedFootHeight": 0.08100362991911846,
+          "soleBlendDifference": -0.10548750898887277
+        }
+      }
+    },
+    {
+      "frame": 2044,
+      "preRoll": false,
+      "rootWorldPosition": [
+        9.463704,
+        0.009997595,
+        -3.42157078
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.07407403,
+              "sourceSoleY": 0.005139147,
+              "footHeight": 0.004557501,
+              "baselineY": 0.0005816459999999999
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.92592597,
+              "sourceSoleY": 0.35594064,
+              "footHeight": 0.356313765,
+              "baselineY": -0.0003731250000000297
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0003024012643028975,
+          "finalSoleY": 0.318420649,
+          "finalSoleMinusWeightedBaseline": 0.3187230502643029,
+          "weightedFootHeight": 0.33025776094777604,
+          "soleBlendDifference": -0.01153471068347317
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.07407403,
+              "sourceSoleY": 0.39828366,
+              "footHeight": 0.397778034,
+              "baselineY": 0.0005056259999999813
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.92592597,
+              "sourceSoleY": -0.0009980721,
+              "footHeight": 0.0,
+              "baselineY": -0.0009980721
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0008866871218296585,
+          "finalSoleY": -0.0008496691,
+          "finalSoleMinusWeightedBaseline": 3.7018021829658514e-05,
+          "weightedFootHeight": 0.02946502202385702,
+          "soleBlendDifference": -0.029428004002027358
+        }
+      }
+    },
+    {
+      "frame": 2045,
+      "preRoll": false,
+      "rootWorldPosition": [
+        9.341159,
+        0.009997558,
+        -3.383562
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0112304688,
+              "sourceSoleY": 0.00498652365,
+              "footHeight": 0.004322811,
+              "baselineY": 0.0006637126499999995
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.988769531,
+              "sourceSoleY": 0.331272483,
+              "footHeight": 0.33148253,
+              "baselineY": -0.000210046999999991
+            }
+          ],
+          "totalWeight": 0.9999999998,
+          "weightedBaselineY": -0.00020023426951000463,
+          "finalSoleY": 0.326685,
+          "finalSoleMinusWeightedBaseline": 0.32688523426951,
+          "weightedFootHeight": 0.3278083729824189,
+          "soleBlendDifference": -0.0009231387129088886
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0112304688,
+              "sourceSoleY": 0.336856365,
+              "footHeight": 0.33638,
+              "baselineY": 0.0004763649999999786
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 0.988769531,
+              "sourceSoleY": 0.0004422085,
+              "footHeight": 0.0,
+              "baselineY": 0.0004422085
+            }
+          ],
+          "totalWeight": 0.9999999998,
+          "weightedBaselineY": 0.0004425920935076437,
+          "finalSoleY": 0.00171074015,
+          "finalSoleMinusWeightedBaseline": 0.0012681480564923561,
+          "weightedFootHeight": 0.0037777050956995413,
+          "soleBlendDifference": -0.002509557039207185
+        }
+      }
+    },
+    {
+      "frame": 2046,
+      "preRoll": false,
+      "rootWorldPosition": [
+        9.234305,
+        0.009997525,
+        -3.347972
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.0116427718,
+              "footHeight": 0.0111274011,
+              "baselineY": 0.0005153707
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.301258117,
+              "footHeight": 0.3014564,
+              "baselineY": -0.0001982830000000213
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0001982830000000213,
+          "finalSoleY": 0.301258117,
+          "finalSoleMinusWeightedBaseline": 0.3014564,
+          "weightedFootHeight": 0.3014564,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.263460547,
+              "footHeight": 0.263084173,
+              "baselineY": 0.00037637400000001264
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.00404906739,
+              "footHeight": 0.0,
+              "baselineY": 0.00404906739
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.00404906739,
+          "finalSoleY": 0.00404906739,
+          "finalSoleMinusWeightedBaseline": 0.0,
+          "weightedFootHeight": 0.0,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2047,
+      "preRoll": false,
+      "rootWorldPosition": [
+        9.119037,
+        0.009997489,
+        -3.31288958
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.03690596,
+              "footHeight": 0.036327973,
+              "baselineY": 0.000577987000000002
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.265684545,
+              "footHeight": 0.266065717,
+              "baselineY": -0.0003811719999999852
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0003811719999999852,
+          "finalSoleY": 0.265684545,
+          "finalSoleMinusWeightedBaseline": 0.266065717,
+          "weightedFootHeight": 0.266065717,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.189363778,
+              "footHeight": 0.188916445,
+              "baselineY": 0.00044733300000002196
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.0110851806,
+              "footHeight": 0.003040827,
+              "baselineY": 0.0080443536
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.0080443536,
+          "finalSoleY": 0.0110851768,
+          "finalSoleMinusWeightedBaseline": 0.0030408232000000007,
+          "weightedFootHeight": 0.003040827,
+          "soleBlendDifference": -3.799999998693737e-09
+        }
+      }
+    },
+    {
+      "frame": 2048,
+      "preRoll": false,
+      "rootWorldPosition": [
+        9.000825,
+        0.009997453,
+        -3.27877879
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.09280196,
+              "footHeight": 0.0922262445,
+              "baselineY": 0.0005757155000000042
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.244000822,
+              "footHeight": 0.244550273,
+              "baselineY": -0.0005494510000000064
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0005494510000000064,
+          "finalSoleY": 0.244000822,
+          "finalSoleMinusWeightedBaseline": 0.244550273,
+          "weightedFootHeight": 0.244550273,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.13001357,
+              "footHeight": 0.12964423,
+              "baselineY": 0.0003693399999999958
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.01308325,
+              "footHeight": 0.005279245,
+              "baselineY": 0.007804004999999999
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.007804004999999999,
+          "finalSoleY": 0.01308325,
+          "finalSoleMinusWeightedBaseline": 0.005279245,
+          "weightedFootHeight": 0.005279245,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2049,
+      "preRoll": false,
+      "rootWorldPosition": [
+        8.880359,
+        0.009997416,
+        -3.247707
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.153267652,
+              "footHeight": 0.152684659,
+              "baselineY": 0.0005829930000000039
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.211620629,
+              "footHeight": 0.211905211,
+              "baselineY": -0.00028458200000000544
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.00028458200000000544,
+          "finalSoleY": 0.211620629,
+          "finalSoleMinusWeightedBaseline": 0.211905211,
+          "weightedFootHeight": 0.211905211,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.08242226,
+              "footHeight": 0.08196618,
+              "baselineY": 0.0004560799999999976
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.03381196,
+              "footHeight": 0.02588414,
+              "baselineY": 0.007927820000000002
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.007927820000000002,
+          "finalSoleY": 0.03381196,
+          "finalSoleMinusWeightedBaseline": 0.02588414,
+          "weightedFootHeight": 0.02588414,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2050,
+      "preRoll": false,
+      "rootWorldPosition": [
+        8.747479,
+        0.009997373,
+        -3.21278238
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.212388,
+              "footHeight": 0.211784229,
+              "baselineY": 0.0006037710000000029
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.162039682,
+              "footHeight": 0.1622299,
+              "baselineY": -0.00019021800000001976
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.00019021800000001976,
+          "finalSoleY": 0.162039682,
+          "finalSoleMinusWeightedBaseline": 0.1622299,
+          "weightedFootHeight": 0.1622299,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.0492721535,
+              "footHeight": 0.0488180965,
+              "baselineY": 0.00045405700000000077
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.104226843,
+              "footHeight": 0.0961675644,
+              "baselineY": 0.008059278599999997
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.008059278599999997,
+          "finalSoleY": 0.104226843,
+          "finalSoleMinusWeightedBaseline": 0.0961675644,
+          "weightedFootHeight": 0.0961675644,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2051,
+      "preRoll": false,
+      "rootWorldPosition": [
+        8.575539,
+        0.009997316,
+        -3.1609354
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.263991028,
+              "footHeight": 0.2633775,
+              "baselineY": 0.0006135280000000298
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.202055275,
+              "footHeight": 0.202322736,
+              "baselineY": -0.0002674609999999966
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0002674609999999966,
+          "finalSoleY": 0.202055275,
+          "finalSoleMinusWeightedBaseline": 0.202322736,
+          "weightedFootHeight": 0.202322736,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.03690511,
+              "footHeight": 0.03643975,
+              "baselineY": 0.000465359999999998
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.203466892,
+              "footHeight": 0.1954469,
+              "baselineY": 0.008019992000000004
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.008019992000000004,
+          "finalSoleY": 0.203466892,
+          "finalSoleMinusWeightedBaseline": 0.1954469,
+          "weightedFootHeight": 0.1954469,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2052,
+      "preRoll": false,
+      "rootWorldPosition": [
+        8.415318,
+        0.009997263,
+        -3.11302471
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.300121665,
+              "footHeight": 0.2994535,
+              "baselineY": 0.0006681649999999983
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.259287238,
+              "footHeight": 0.2595733,
+              "baselineY": -0.00028606200000003135
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.00028606200000003135,
+          "finalSoleY": 0.259287238,
+          "finalSoleMinusWeightedBaseline": 0.2595733,
+          "weightedFootHeight": 0.2595733,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.0530853271,
+              "footHeight": 0.05261618,
+              "baselineY": 0.0004691471000000044
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.269881546,
+              "footHeight": 0.261771351,
+              "baselineY": 0.008110195000000042
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.008110195000000042,
+          "finalSoleY": 0.269881546,
+          "finalSoleMinusWeightedBaseline": 0.261771351,
+          "weightedFootHeight": 0.261771351,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2053,
+      "preRoll": false,
+      "rootWorldPosition": [
+        8.30064,
+        0.009997227,
+        -3.08206129
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.341053665,
+              "footHeight": 0.340456367,
+              "baselineY": 0.0005972980000000239
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.319269121,
+              "footHeight": 0.3195693,
+              "baselineY": -0.0003001790000000115
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0003001790000000115,
+          "finalSoleY": 0.319269061,
+          "finalSoleMinusWeightedBaseline": 0.31956924000000003,
+          "weightedFootHeight": 0.3195693,
+          "soleBlendDifference": -5.999999996841865e-08
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.08341206,
+              "footHeight": 0.08288133,
+              "baselineY": 0.0005307299999999932
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.331767619,
+              "footHeight": 0.323625922,
+              "baselineY": 0.008141697000000003
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.008141697000000003,
+          "finalSoleY": 0.331767619,
+          "finalSoleMinusWeightedBaseline": 0.323625922,
+          "weightedFootHeight": 0.323625922,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2054,
+      "preRoll": false,
+      "rootWorldPosition": [
+        8.197785,
+        0.009997194,
+        -3.055061
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.3813392,
+              "footHeight": 0.3806942,
+              "baselineY": 0.0006450000000000067
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.374639869,
+              "footHeight": 0.374872535,
+              "baselineY": -0.0002326659999999925
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0002326659999999925,
+          "finalSoleY": 0.374639869,
+          "finalSoleMinusWeightedBaseline": 0.374872535,
+          "weightedFootHeight": 0.374872535,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.09807587,
+              "footHeight": 0.09751994,
+              "baselineY": 0.0005559299999999961
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.39344722,
+              "footHeight": 0.385468483,
+              "baselineY": 0.007978737000000014
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.007978737000000014,
+          "finalSoleY": 0.39344722,
+          "finalSoleMinusWeightedBaseline": 0.385468483,
+          "weightedFootHeight": 0.385468483,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2055,
+      "preRoll": false,
+      "rootWorldPosition": [
+        8.099342,
+        0.009997161,
+        -3.03000546
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.409526646,
+              "footHeight": 0.4088677,
+              "baselineY": 0.0006589459999999936
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.4242711,
+              "footHeight": 0.424466729,
+              "baselineY": -0.00019562899999997496
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.00019562899999997496,
+          "finalSoleY": 0.4242711,
+          "finalSoleMinusWeightedBaseline": 0.424466729,
+          "weightedFootHeight": 0.424466729,
+          "soleBlendDifference": 0.0
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.0549350381,
+              "footHeight": 0.0544001833,
+              "baselineY": 0.0005348547999999981
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.435198069,
+              "footHeight": 0.4272044,
+              "baselineY": 0.007993669000000037
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.007993669000000037,
+          "finalSoleY": 0.435198069,
+          "finalSoleMinusWeightedBaseline": 0.4272044,
+          "weightedFootHeight": 0.4272044,
+          "soleBlendDifference": 0.0
+        }
+      }
+    },
+    {
+      "frame": 2056,
+      "preRoll": false,
+      "rootWorldPosition": [
+        7.998211,
+        0.009997128,
+        -3.00496
+      ],
+      "sides": {
+        "left": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.4557058,
+              "footHeight": 0.455261141,
+              "baselineY": 0.0004446590000000139
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.470970571,
+              "footHeight": 0.47124368,
+              "baselineY": -0.0002731089999999936
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": -0.0002731089999999936,
+          "finalSoleY": 0.470970541,
+          "finalSoleMinusWeightedBaseline": 0.47124365,
+          "weightedFootHeight": 0.47124368,
+          "soleBlendDifference": -2.9999999984209325e-08
+        },
+        "right": {
+          "sources": [
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Run_FootMotionTarget",
+              "clipIdentity": "4e613663635adb8428d84960c297d5d7:7400000",
+              "groupClipIndex": 10,
+              "weight": 0.0,
+              "sourceSoleY": 0.000480364542,
+              "footHeight": 0.0,
+              "baselineY": 0.000480364542
+            },
+            {
+              "sourceName": "Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start_FootMotionTarget",
+              "clipIdentity": "122473249c778fb49aa583ed0d45bc65/7400000",
+              "groupClipIndex": 1,
+              "weight": 1.0,
+              "sourceSoleY": 0.440136015,
+              "footHeight": 0.432117134,
+              "baselineY": 0.008018880999999978
+            }
+          ],
+          "totalWeight": 1.0,
+          "weightedBaselineY": 0.008018880999999978,
+          "finalSoleY": 0.440136015,
+          "finalSoleMinusWeightedBaseline": 0.432117134,
+          "weightedFootHeight": 0.432117134,
+          "soleBlendDifference": 0.0
+        }
+      }
+    }
+  ],
+  "ikDiagnostics": {
+    "cold": {
+      "status": "failed",
+      "maximumHistoricalJointError": 0.000240472364,
+      "allocatedBytes": 0,
+      "solverModuleMvid": "04c6b548-a400-460e-8ffd-f8894af7d326",
+      "rootMotionModuleMvid": "9ddc76af-1111-4780-8a7c-82ad28fa1e26"
+    },
+    "loaded": {
+      "status": "failed",
+      "maximumHistoricalJointError": 0.000240472364,
+      "allocatedBytes": 0,
+      "solverModuleMvid": "cd6cec60-06dd-47f0-9dd6-6ad8029c56d7",
+      "rootMotionModuleMvid": "9ddc76af-1111-4780-8a7c-82ad28fa1e26"
+    }
+  },
+  "exclusions": "逐帧独立求解器及实际Editor加载求解器均仍0.240472364mm；不支持跨帧状态或冻结实现绑定是本偏差原因。现有原采样未提供完整组件页，尚未定位剩余输入差异。",
+  "sourceSnapshotSha256": "a311e40e3c2817ab4e0d79aac2f9c3c901650c5a09ca844c662c9b5b3920034b",
+  "resultSha256": {
+    "releasing-source-geometry-raw.json": "f473efb26a34930a6fb945ce2dd34cac2d3286731b938dc2d6d9f6d504d13db9",
+    "releasing-business-ik-diagnostic-cold.json": "cd2666a9673a3677386ef97e638ba0585a18d5c43f9022a02a0206a5b43d32f0",
+    "releasing-business-ik-diagnostic-loaded.json": "2a554a6cd6d8e57394f8de6c269f8c070c90143d6a48b81161be6e4d819b30d9"
+  },
+  "handoffStatus": "所有Unity作业已结束；测试窗口未持有DisallowAutoRefresh；独立编译后build-server已关闭；按用户实测准备要求停止后续调用。"
+}

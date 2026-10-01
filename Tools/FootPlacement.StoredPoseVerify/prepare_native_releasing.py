@@ -58,6 +58,22 @@ def declaration(text, name):
 
 
 files = [Path(__file__).with_name('CapturedReleasingNativeTests.cs')]
+files.append(Path(__file__).with_name('CapturedReleasingSourceGeometry.cs'))
+rig_relative = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/FootPlacement/CharacterFootPlacementPoseRig.cs'
+rig_text = subprocess.check_output(['git','-C',str(ROOT),'show','69a36d339:'+rig_relative]).decode('utf-8')
+rig_methods=[]
+for name in ['CaptureFoot','TransformPoint']:
+    found=re.search(r'^        static \w+ '+name+r'\(',rig_text,re.M)
+    opening=rig_text.index('{',found.start()) if name=='CaptureFoot' else -1
+    if name=='CaptureFoot':
+        end,depth=opening+1,1
+        while depth:
+            depth+=(rig_text[end]=='{')-(rig_text[end]=='}');end+=1
+    else: end=rig_text.index(';',found.start())+1
+    rig_methods.append(rig_text[found.start():end].replace('        static ','        internal static ',1))
+rig_path=OUT/'CapturedFootPoseRigFunctions.cs'
+rig_path.write_text('using System;\nusing UnityEngine;\nusing Unity.Collections;\nusing ThirdPersonCharacter.Pipeline.Animation;\nusing ThirdPersonCharacter.Pipeline.Presentation;\nnamespace ThirdPersonCharacter.Pipeline.Editor { internal static class CapturedFootPoseRigFunctions {\n'+'\n'.join(rig_methods)+'\n}}',encoding='utf-8')
+files.append(rig_path)
 provenance = {}
 for commit, label in [(BASELINE, 'Historical'), (COMMIT, 'Current')]:
     methods = ['BlendPoses', 'CopyPose', 'BlendParameters', 'AppendContributions', 'BlendFeet', 'BoneOutputWeight']

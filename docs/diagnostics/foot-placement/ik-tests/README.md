@@ -1,5 +1,15 @@
 # 脚部局部复算工具证据
 
+## 实测准备前的执行交接（2026-10-01）
+
+所有本窗口Unity调用已结束；未调用或持有`AssetDatabase.DisallowAutoRefresh`，没有待释放持有，不调用未配对的`AllowAutoRefresh`。独立编译后build-server已关闭。用户要求先实测保留的改善版，因此停止新增Unity调用、Assets写入和测试运行，主窗口接手刷新；保存结果和文档不启动新实验。
+
+同一完整释放业务的两个排除实验已经实际结束：[逐帧独立求解器](releasing-business-ik-diagnostic-cold.json)、[Editor实际加载求解器](releasing-business-ik-diagnostic-loaded.json)。两者历史最大关节点误差均0.240472364mm，计算均0B；实际加载solver MVID为`cd6cec60-06dd-47f0-9dd6-6ad8029c56d7`，RootMotion为`9ddc76af-1111-4780-8a7c-82ad28fa1e26`。不支持跨帧求解状态或冻结实现绑定差异是原因，不改0.2mm容差，不猜runtime tuning，不修改生产solver。完整原组件页尚未取得，剩余输入差异仍未定位。
+
+已完成2023种子加33帧的每源几何观测。正式ACL源姿势和实际Native混合输出经正式`CharacterFootPlacementPoseRig.CaptureFoot`代码及heel/toe标定得到组件脚底中点，原始坐标、源名称、每脚实际权重、作者FootHeight、原世界PoseRoot与RootBonePolicy单列保留，见[原始几何](releasing-source-geometry-raw.json)和[基准算术](releasing-source-geometry.json)。本轮只观测`B_i=sourceSoleY−FootHeight_i`及`H=finalSoleY−Σ(w_i B_i)/Σw_i`；ExcludeSourceRoot/PreserveReferenceScale，单位组件m，不视为已知地面，不复活脚高加权候选。右H在2037～2043依次约0.286918、0.244292、0.137402、0.021570、−0.077843、−0.070440、−0.024484m。
+
+本轮[封存源码与实际程序集](releasing-observation-source-snapshot.zip)包含三种实际执行身份，完整生成、成员哈希复核后原子替换。几何首次编译暴露using NativeArray写入限制，修正为可写别名后实际执行；manifest明确记载准备期与最终编译输入的哈希更正。用户停止后只保存已经得到的证据。原场景HTML新增观测区已生成，但未重新运行交互检查；旧33帧/三版区域的先前DOM检查不冒充新增区已验收。
+
 ## 完整全身 Action 释放窗口（2026-10-01，FBBIK校准未通过）
 
 同一业务扩为2023真实种子、2024～2056连续33帧，保留进入Landing、Releasing和退出Swing。完整结果在[原场景页](releasing-action-native.html)：[Native](releasing-business-native.json)、[双脚预测/骨盆/Goal](releasing-business-goal.json)、[实际FBBIK](releasing-business-ik.json)、[向量汇总](releasing-business-summary.json)、[源码与执行程序集快照](releasing-business-source-snapshot.zip)。原2035～2046的12帧结果及输入单独冻结，没有改写为33帧执行证据。

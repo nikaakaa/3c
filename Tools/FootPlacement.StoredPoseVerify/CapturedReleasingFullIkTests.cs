@@ -28,6 +28,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             report["recordedLegPositionDiagnostic"] = recordedLegPositions;
             report["recordedHistoricalGoalDiagnostic"] = recordedHistoricalGoals;
             report["componentPoseRotationRestoration"] = "正式已归一化构造保持JSON四元数位值，不重复normalized";
+            report["solverModuleMvid"] = typeof(CharacterFinalIkFullBodySolver).Module.ModuleVersionId.ToString();
+            report["rootMotionModuleMvid"] = typeof(RootMotion.FinalIK.IKSolverFullBodyBiped).Module.ModuleVersionId.ToString();
+#if FBBIK_COLD_SOLVER_DIAGNOSTIC
+            report["coldSolverPerFrameDiagnostic"] = true;
+#endif
+#if FBBIK_LOADED_SOLVER_DIAGNOSTIC
+            report["loadedSolverDiagnostic"] = true;
+#endif
             try
             {
                 Assert.That(EditorApplication.isPlaying || EditorApplication.isCompiling, Is.False);
@@ -53,6 +61,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     try
                     {
                         for (int i = 0; i < frames.Length; i++) frames[i] = new Frame(captured[i], fixture["columns"], poses["rows"][i], rig, recordedLegPositions);
+#if FBBIK_COLD_SOLVER_DIAGNOSTIC
+                        frames[0].DiagnosticSolver = solver;
+                        for(int i=1;i<frames.Length;i++) frames[i].DiagnosticSolver = new CharacterFinalIkFullBodySolver(rig, profile, parents, virtualBones);
+#endif
                         foreach (bool current in new[] { false, true })
                         {
                             var results = new Result[frames.Length];
@@ -103,6 +115,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             solver.Reset(); CharacterFullBodyIkBendHistory history = default;
             for (int i = 0; i < frames.Length; i++)
             {
+#if FBBIK_COLD_SOLVER_DIAGNOSTIC
+                solver = frames[i].DiagnosticSolver; solver.Reset(); history = default;
+#endif
                 Frame f=frames[i]; pending.CopyFrom(f.Pose);
                 for (int g=0;g<3;g++) workspace[g]=goals[i][g];
                 var result = solver.SolvePrepared(new NativeSlice<AnimationLocalBonePose>(pending), in f.Header, workspace, ref history, f.Sequence, f.Completion, diagnostics);
@@ -122,6 +137,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal readonly CharacterFullBodyIkGoal[] SeedGoals;
             internal readonly Vector3[] Expected;
             internal readonly float LeftRecordedBend,RightRecordedBend;
+#if FBBIK_COLD_SOLVER_DIAGNOSTIC
+            internal CharacterFinalIkFullBodySolver DiagnosticSolver;
+#endif
             internal Frame(JToken captured,JToken columns,JToken pose,CharacterAnimationRigPayload rig,bool recordedLegPositions)
             {
                 var values=((JArray)columns["main"]).Select((k,i)=>new {Key=(string)k,Value=(string)captured["main"][i]}).ToDictionary(x=>x.Key,x=>x.Value);

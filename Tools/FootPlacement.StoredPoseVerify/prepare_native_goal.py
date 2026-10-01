@@ -11,12 +11,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['sources', 'rotation', 'releasing'], default='sources')
 parser.add_argument('--variant', choices=['historical', 'current'], default='historical')
 parser.add_argument('--commit')
+parser.add_argument('--ik-binding', choices=['frozen','loaded','cold'], default='frozen')
+parser.add_argument('--out', type=Path)
 args = parser.parse_args()
 HELPER_COMMIT = '409b40b8a'
 RUNTIME_COMMIT = '69a36d339' if args.mode == 'releasing' else '18e1f2a4f' if args.mode == 'sources' else {'historical': '552f13083', 'current': '15894ee7b'}[args.variant]
 if args.commit is not None: RUNTIME_COMMIT = args.commit
 TEMP = CLIENT / 'Temp/FootStoredPoseFunctions' if args.mode == 'sources' else CLIENT / 'Temp/FootRotationComparison'
 OUT = TEMP if args.mode == 'sources' else TEMP / (args.variant + '-' + RUNTIME_COMMIT)
+if args.out: OUT = args.out.resolve()
 OUT.mkdir(parents=True, exist_ok=True)
 files = [Path(__file__).with_name('CapturedStoredFootGoalTests.cs')]
 sources = {}
@@ -41,7 +44,7 @@ files.append(module_fragment)
 if args.mode == 'releasing':
     files.append(Path(__file__).with_name('CapturedReleasingFootPrediction.cs'))
     files.append(Path(__file__).with_name('CapturedReleasingFullIkTests.cs'))
-    for name in ['CharacterFinalIkFullBodySolver.cs', 'CharacterFinalIkPoseBufferBackend.cs', 'CharacterFullBodyIkDiagnostics.cs']:
+    for name in ([] if args.ik_binding == 'loaded' else ['CharacterFinalIkFullBodySolver.cs', 'CharacterFinalIkPoseBufferBackend.cs', 'CharacterFullBodyIkDiagnostics.cs']):
         relative = '3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation/PoseConstraints/' + name
         path = OUT / name
         path.write_bytes(subprocess.check_output(['git', '-C', str(ROOT), 'show', RUNTIME_COMMIT + ':' + relative]))
@@ -79,6 +82,8 @@ for name in runtime_names:
 response = ['-nostdlib+', '-langversion:latest', '-target:library', '-utf8output', '-nowarn:0436', '-out:"' + str(OUT / 'ThirdPersonClient.Editor.dll') + '"']
 if args.mode == 'rotation' and args.variant == 'current': response.append('-define:ROTATION_CANDIDATE')
 if args.mode == 'releasing': response.append('-define:RELEASING_FIXTURE')
+if args.ik_binding == 'cold': response.append('-define:FBBIK_COLD_SOLVER_DIAGNOSTIC')
+if args.ik_binding == 'loaded': response.append('-define:FBBIK_LOADED_SOLVER_DIAGNOSTIC')
 response.extend('"' + str(path) + '"' for path in files)
 editor = json.loads(CLIENT.joinpath('Temp/FootStoredPoseFunctions/editor-assemblies.json').read_text(encoding='utf-8-sig'))
 references = editor['result']['data']['result']
@@ -91,6 +96,7 @@ assert all(name in by_name for name in needed), [name for name in needed if name
 response.extend('-r:"' + by_name[name] + '"' for name in needed)
 OUT.joinpath('native-goal-compile.rsp').write_text('\n'.join(response), encoding='utf-8')
 manifest = {'runtimeSourceCommit': RUNTIME_COMMIT, 'helperCommit': HELPER_COMMIT, 'mode': args.mode, 'variant': args.variant, 'sources': {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}, 'bindings': {name: hashlib.sha256(Path(by_name[name]).read_bytes()).hexdigest() for name in needed}}
+manifest['ikBinding'] = args.ik_binding
 manifest['moduleMethods'] = {'sourcePath': module_relative, 'sourceSha256': hashlib.sha256(module_source.encode('utf-8')).hexdigest(), 'adaptation': 'Only private static visibility is changed to internal static; both formal method bodies come directly from git show', 'bodySha256': [hashlib.sha256(method.encode('utf-8')).hexdigest() for method in methods]}
 OUT.joinpath('native-goal-source-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
 print('Prepared frozen native Goal sources:', len(files), 'and real Editor bindings:', len(needed))

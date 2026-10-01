@@ -8,6 +8,7 @@ using NodeCanvas.Editor;
 using NodeCanvas.Framework;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -16,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         const double ConnectionPulseSeconds = 0.5d;
         const double RepaintIntervalSeconds = 1d / 30d;
+        static readonly ProfilerMarker s_Update = new("RuntimeDebug.GraphObservation");
 
         readonly FlowGraph m_Graph;
         readonly string m_GraphId;
@@ -205,6 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RepaintIfNeeded(now);
                 return;
             }
+            using var profile = s_Update.Auto();
             m_Dirty = false;
             m_Nodes.Clear();
             m_Edges.Clear();

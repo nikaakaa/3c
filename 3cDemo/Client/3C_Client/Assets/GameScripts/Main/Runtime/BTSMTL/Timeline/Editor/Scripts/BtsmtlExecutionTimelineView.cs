@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using Slate;
+using Unity.Profiling;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -13,6 +14,8 @@ namespace BTSMTL.Timeline.Editor
 {
     public sealed class BtsmtlExecutionTimelineView : VisualElement, IDisposable
     {
+        static readonly ProfilerMarker s_Projection = new("RuntimeDebug.ExecutionProjection");
+        static readonly ProfilerMarker s_Draw = new("RuntimeDebug.ExecutionDraw");
         readonly RuntimeDebugSession m_Session = RuntimeDebugSession.Shared;
         readonly IMGUIContainer m_Surface;
         readonly Label m_Status = new Label();
@@ -113,6 +116,7 @@ namespace BTSMTL.Timeline.Editor
                 m_HistorySequence == m_Session.HistorySequence && m_LastCaptureId == m_Session.CaptureId &&
                 m_LastState == m_Session.AttachmentState)
                 return;
+            using var profile = s_Projection.Auto();
             RuntimeExecutionTimeline timeline = m_Session.BuildExecutionTimeline();
             if (timeline == null)
             {
@@ -213,6 +217,7 @@ namespace BTSMTL.Timeline.Editor
 
         void Draw()
         {
+            using var profile = s_Draw.Auto();
             if (m_Slate != null)
                 m_Slate.DrawEmbeddedGUI(Mathf.Max(1, m_Surface.contentRect.width),
                     Mathf.Max(1, m_Surface.contentRect.height), m_BeginWindows, m_EndWindows);

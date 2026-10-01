@@ -149,9 +149,9 @@ namespace BTSMTL.Diagnostics.Editor
                 m_SelectedInstance = default;
             }
 
-            IReadOnlyList<RuntimeInstanceKey> instances = ResolveInstances(view);
             if (m_Mode == RuntimeDebugViewBindingMode.Following)
             {
+                IReadOnlyList<RuntimeInstanceKey> instances = ResolveInstances(view);
                 if (instances.Count > 1)
                 {
                     m_SelectedInstance = default;
@@ -168,7 +168,11 @@ namespace BTSMTL.Diagnostics.Editor
 
             if (m_Mode == RuntimeDebugViewBindingMode.Pinned)
             {
-                m_Status = !m_SelectedInstance.IsValid ? RuntimeDebugViewBindingStatus.NoInstance : Contains(instances, m_SelectedInstance)
+                m_Status = !m_SelectedInstance.IsValid ? RuntimeDebugViewBindingStatus.NoInstance :
+                    (Kind == RuntimeDebugViewKind.Graph
+                        ? view.ContainsGraphInstance(m_Request.Source.GraphAuthoringId, m_SelectedInstance)
+                        : view.TryGetTimelinePlaybackSummary(m_Request.Source.TimelineAuthoringId, m_SelectedInstance,
+                            out _, m_Request.Source.GraphAuthoringId))
                     ? RuntimeDebugViewBindingStatus.Ready
                     : RuntimeDebugViewBindingStatus.PinnedInstanceMissing;
                 return m_Resolution;
@@ -191,14 +195,5 @@ namespace BTSMTL.Diagnostics.Editor
             return m_InstanceScratch;
         }
 
-        static bool Contains(IReadOnlyList<RuntimeInstanceKey> instances, RuntimeInstanceKey value)
-        {
-            for (int i = 0; i < instances.Count; i++)
-            {
-                if (instances[i].Equals(value))
-                    return true;
-            }
-            return false;
-        }
     }
 }

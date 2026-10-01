@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 
 namespace BTSMTL.Diagnostics.Editor
 {
     internal sealed class RuntimeDebugTargetProvider
     {
+        static readonly ProfilerMarker s_Refresh = new("RuntimeDebug.LiveSync");
+        static readonly ProfilerMarker s_Read = new("RuntimeDebug.LiveRead");
+        static readonly ProfilerMarker s_Apply = new("RuntimeDebug.LiveApply");
         readonly RuntimeDiagnosticsTarget m_Target;
         readonly RuntimeDebugSourceMapSnapshot m_SourceMap;
         readonly RuntimeDebugViewModel m_LiveModel;
@@ -34,7 +38,10 @@ namespace BTSMTL.Diagnostics.Editor
 
         public bool Refresh(IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
         {
-            RuntimeLiveStateRead read = m_Target.Store.CopyLiveStateSince(m_LiveCursor, m_LiveChanges);
+            using var profile = s_Refresh.Auto();
+            RuntimeLiveStateRead read;
+            using (s_Read.Auto())
+                read = m_Target.Store.CopyLiveStateSince(m_LiveCursor, m_LiveChanges);
             var capture = m_Target.Store.CaptureStatus;
             RuntimeTraceChannel channels = m_Target.Store.EffectiveChannels;
             bool stateChanged = read.Version != m_LiveCursor;
@@ -43,6 +50,7 @@ namespace BTSMTL.Diagnostics.Editor
             if (!stateChanged && !captureChanged && !channelChanged)
                 return false;
 
+            using var applyProfile = s_Apply.Auto();
             m_LiveModel.BeginUpdate(stateChanged && read.RequiresFullSync);
             if (stateChanged)
             {

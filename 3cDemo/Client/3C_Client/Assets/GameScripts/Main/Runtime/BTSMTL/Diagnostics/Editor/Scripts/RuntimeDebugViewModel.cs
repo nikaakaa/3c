@@ -288,6 +288,10 @@ namespace BTSMTL.Diagnostics.Editor
             destination.Sort(m_InstanceSequenceOrder);
         }
 
+        public bool ContainsGraphInstance(string graphAuthoringId, RuntimeInstanceKey instance) =>
+            m_GraphInstances.TryGetValue(graphAuthoringId, out Dictionary<RuntimeInstanceKey, ulong> instances) &&
+            instances.ContainsKey(instance);
+
         public long GetGraphInstanceRevision(string graphAuthoringId)
         {
             return !string.IsNullOrEmpty(graphAuthoringId) && m_GraphInstanceRevisions.TryGetValue(graphAuthoringId, out long revision)

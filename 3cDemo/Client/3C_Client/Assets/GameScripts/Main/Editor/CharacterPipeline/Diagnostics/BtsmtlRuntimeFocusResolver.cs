@@ -2,15 +2,17 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
     sealed class BtsmtlRuntimeFocusResolver
     {
         public static BtsmtlRuntimeFocusResolver Shared { get; } = new();
+        static readonly ProfilerMarker s_Resolve = new("RuntimeDebug.ResolveFocus");
 
         readonly List<RuntimeDebugEventView> m_Events = new();
-        readonly Dictionary<(RuntimeInstanceKey, RuntimeSourceElementKey), RuntimeDebugEventView> m_Nodes = new();
+        readonly Dictionary<(RuntimeInstanceKey, RuntimeSourceElementKey), RuntimeNodeExecutionObservation> m_Nodes = new();
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_Graphs = new();
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_CompletedGraphs = new();
         readonly Dictionary<RuntimeInstanceKey, RuntimeDebugEventView> m_Timelines = new();
@@ -29,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (ReferenceEquals(m_View, view) && m_Revision == view.Revision)
                 return;
+            using var profile = s_Resolve.Auto();
             m_View = view;
             m_Revision = view.Revision;
             m_Candidates.Clear();
@@ -55,12 +58,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 if (instance.Kind == RuntimeInstanceKind.SkillExecution &&
                     item.Source.Kind == RuntimeSourceElementKind.Node &&
-                    RuntimeNodeExecutionObservation.TryCreate(item, out _))
+                    RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation))
                 {
                     var key = (instance, item.Source);
-                    if (!m_Nodes.TryGetValue(key, out RuntimeDebugEventView previous) ||
-                        item.Event.Sequence > previous.Event.Sequence)
-                        m_Nodes[key] = item;
+                    if (!m_Nodes.TryGetValue(key, out RuntimeNodeExecutionObservation previous) ||
+                        item.Event.Sequence > previous.Event.Event.Sequence)
+                        m_Nodes[key] = observation;
                 }
                 else if (instance.Kind == RuntimeInstanceKind.TimelinePlayback &&
                          item.Event.Payload.TimelinePlayback.IsValid &&
@@ -76,9 +79,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             m_CompletedTimelines[instance] = item;
                 }
             }
-            foreach (RuntimeDebugEventView item in m_Nodes.Values)
+            foreach (RuntimeNodeExecutionObservation observation in m_Nodes.Values)
             {
-                RuntimeNodeExecutionObservation.TryCreate(item, out RuntimeNodeExecutionObservation observation);
+                RuntimeDebugEventView item = observation.Event;
                 RuntimeInstanceKey instance = item.Event.RuntimeInstance;
                 if (m_DestroyedGraphs.TryGetValue(instance, out ulong destroyed) && destroyed >= item.Event.Sequence)
                     continue;

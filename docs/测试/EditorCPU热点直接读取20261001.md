@@ -36,3 +36,34 @@ FootPlacement、FullBodyIK 和来源准备的算法尚未修改，不能声称 F
 后续在原调用边界加入 CPU 子标记。FootPlacement 拆为 CurrentSupport、LandingPrediction、GroundPath、BodyTrajectory、Lifecycle、Completion、SoleSupport，统一前缀为 `CharacterPose.FootPlacement.`。FullBodyIK 拆为 BindPose、ApplyGoals、Solve、Diagnostics，统一前缀为 `CharacterPose.FullBodyIK.`；其中 Diagnostics 只包围实际开启诊断后的数据生成。`MainBehaviour.Update → GameplayTickBootstrap.FrameUpdate` 拆为 `GameplayTick.FrameUpdate`、`GameplayTick.Hotkeys`、`GameplayTick.Input`、`GameplayTick.Logic`，Logic 按实际逻辑 Tick 调用计数，用于区分单 Tick 计算和一帧推进多个 Tick。标记直接读取 Editor Profiler，沿已有静态 ProfilerMarker 模式实现，没有新增逐帧日志、闭包、结果缓存或执行路径，没有改变支撑查询、状态推进、曲线采样与 IK 算法。
 
 本次核对同一目标实例，项目路径正确、非 Play、非编译、scriptCompilationFailed=false，保留帧仍是 3351–3650，两个录制开关均关闭。该帧集早于新增子标记，没有重读旧帧制造新结论，没有擅自进入 Play、构建 Player 或新增测试代码。本次持有和释放一次 AssetDatabase 自动刷新禁用，计数已配对；向目标 Editor 请求一次脚本编译后，确认编译完成、scriptCompilationFailed=false、Console 错误查询为空，六个类型的十五个静态 ProfilerMarker 字段均已加载。新增标记的实际运行帧、各子阶段排序和性能改善仍未验证；需要下一轮实际 Play 采样，尤其是具体 Graph/Timeline 活跃及自动来源切换时的帧。
+
+## RuntimeDebug 静态检查与计算清理
+
+用户随后将当前范围收敛为 RuntimeDebug，并要求先静态检测；之后已有运行时直接读取 Profiler。本轮没有启动 Play、回放、新 Profiler 录制或 Player 构建，没有新增或修改测试代码。前文的 FootPlacement 和 FullBodyIK 数据保留为历史证据，不用于判断 RuntimeDebug 开启后的耗时。
+
+运行事件由 `RuntimeDiagnosticsStore.CopyLiveStateSince` 提供，`RuntimeDebugTargetProvider.Refresh` 将增量提交给现有 `RuntimeDebugViewModel`；Workbench 焦点、Graph 观察和执行 Timeline 消费同一模型。本轮清理两处已确认的重复计算：
+
+- `BtsmtlRuntimeFocusResolver.Refresh` 原先筛选节点事件时调用一次 `RuntimeNodeExecutionObservation.TryCreate`，遍历最新节点时再转换一次。现在节点索引保存第一次得到的 observation，后续直接消费其 Event 和终止状态；最新事件的 Sequence 比较、销毁排除、父子调用关系和完成位置选择保持原语义。
+- `RuntimeDebugViewBinding.Refresh` 原先在 Following、Pinned 和 None 三种模式下都复制并排序全部实例，Pinned 随后只线性查询所选实例。现在只在 Following 中执行原来的实例列表投影；Pinned Graph 查询 ViewModel 的现有 Graph 实例索引，Pinned Timeline 使用现有 `TryGetTimelinePlaybackSummary` 及相同的 Timeline/来源 Graph 匹配。没有增加另一份缓存或索引，实例消失时仍显示 PinnedInstanceMissing，多实例 Following 的选择规则不变。
+
+在原调用边界加入七个静态 CPU 标记，用于后续读取实际运行帧：
+
+| 标记 | 包围的处理 |
+| --- | --- |
+| RuntimeDebug.LiveSync | Provider 的一次实时同步 |
+| RuntimeDebug.LiveRead | Store 的增量读取 |
+| RuntimeDebug.LiveApply | 发生变化后的 ViewModel 更新与提交 |
+| RuntimeDebug.ResolveFocus | 模型版本变化后的焦点候选解析 |
+| RuntimeDebug.GraphObservation | Graph 脏数据的节点、边与值投影 |
+| RuntimeDebug.ExecutionProjection | 版本变化后的执行 Timeline 投影 |
+| RuntimeDebug.ExecutionDraw | Slate 执行 Timeline 绘制 |
+
+LiveRead 和 LiveApply 是 LiveSync 的子项，不能与父项重复相加。标记没有改变同步频率、订阅、采集模式、历史存储或重绘间隔，没有加入逐帧日志、闭包或额外结果集合。
+
+四个标记文件与节点转换修改经 `ThirdPersonClient.Editor.csproj` 编译，90 个警告、0 个错误，见 [Editor 编译日志](../../.performance-build/reports/20261001-runtime-debug-profiler-editor-build.log)；固定实例查询修改经 `BTSMTL.Diagnostics.Editor.csproj` 编译，2 个 Unity Test Framework 警告、0 个错误，见 [绑定编译日志](../../.performance-build/reports/20261001-runtime-debug-pinned-binding-build.log)。两次构建均使用 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后执行 build-server shutdown。六个源文件的 `git diff --check` 通过。
+
+同一目标 Editor 曾在非 Play、非编译且 scriptCompilationFailed=false 时确认七个 CPU 标记已加载。随后自动导入经历一次编译和域重载；最终再次核对项目路径正确、playing=false、compiling=false、updating=false、scriptCompilationFailed=false，并通过只读反射确认 `ContainsGraphInstance` 已加载。没有主动刷新或请求新的编译。
+
+最终 Console 查询保留两条 `timeline_dependency_unresolved` 与一条 `actor_roster_missing` 启动错误，没有清空 Console。本轮未启动运行，不能将这些保留消息当成本轮重现，也没有扩大范围修改资源装配或角色注册。
+
+这些结果证明源码改动可编译，尚未证明实际 FPS、毫秒耗时或 RuntimeDebug 全链路 0 GC。焦点解析仍按 ViewModel Revision 扫描当前 Graph/Timeline 事件，Graph 投影和 Slate 绘制的实际成本也仍需新标记的运行帧判断。后续已有运行时直接读取对应帧，当前不追加启动和采集。
